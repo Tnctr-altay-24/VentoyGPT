@@ -568,7 +568,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     char *label = NULL;
     struct grub_partition *partition;
 
-    if (dev->disk == NULL || dev->disk->partition == NULL)
+    if (dev == NULL || dev->disk == NULL || dev->disk->partition == NULL)
     {
         return ventoy_set_check_result(1 | 0x1000, "Internal Error");
     }
@@ -611,25 +611,34 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(3 | 0x1000, "File ventoy/ventoy.cpio open failed in VTOYEFI partition");
     }
 
-    if (NULL == grub_strstr(file->fs->name, "fat"))
+    if (file->fs == NULL || file->fs->name == NULL || NULL == grub_strstr(file->fs->name, "fat"))
     {
         grub_file_close(file);
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-    partition = dev->disk->partition;
-    if (partition->number != 2 || partition->start != 478009040)
+    if (file->device == NULL || file->device->disk == NULL || file->device->disk->partition == NULL)
     {
-        return ventoy_set_check_result(5, "Ventoy partition is not start at 1MB");
+        grub_file_close(file);
+        return ventoy_set_check_result(5, "VTOYEFI bolum bilgisi mevcut degil");
     }
 
+    partition = file->device->disk->partition;
+
+    if (partition->number != 2 || partition->start != 478009040)
+    {
+        grub_file_close(file);
+        return ventoy_set_check_result(5, "VTOYEFI bolum bilgisi mevcut degil");
+    }
+    
     if (workaround)
     {
-        if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
+        if (grub_strncmp(
+            g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
         {
             ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-            if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
-                (PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 4294960)
+
+            if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 || PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA != 4294960)
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -637,20 +646,27 @@ static int ventoy_check_official_device(grub_device_t dev)
         }
         else
         {
-            ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-            if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
-                PartTbl[1].SectorCount != 4294960)
-            {
-                grub_file_close(file);
-                return ventoy_set_check_result(6, "Disk partition layout check failed.");
-            }
+            ventoy_part_table *PartTbl =
+            g_ventoy_part_info->MBR.PartTbl;
+
+          if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount || PartTbl[1].SectorCount != 4294960)
+          {
+              grub_file_close(file);
+              return ventoy_set_check_result(6, "Disk partition layout check failed.");
+          }
         }
     }
     else
     {
-        offset = partition->start + partition->len;
-        partition = file->device->disk->partition;
-        if ((partition->number != 1) || (partition->len != 4294960) || (offset != partition->start))
+        struct grub_partition *first_partition;
+        struct grub_partition *efi_partition;
+
+        first_partition = dev->disk->partition;
+        efi_partition = file->device->disk->partition;
+
+        offset = first_partition->start + first_partition->len;
+
+        if (efi_partition->number != 2 || efi_partition->len != 4294960 || offset != efi_partition->start)
         {
             grub_file_close(file);
             return ventoy_set_check_result(7, "Disk partition layout check failed.");
@@ -663,20 +679,29 @@ static int ventoy_check_official_device(grub_device_t dev)
     {
         grub_snprintf(devname, sizeof(devname), "%s,3", dev->disk->name);
         dev2 = grub_device_open(devname);
+
         if (!dev2)
         {
             return ventoy_set_check_result(8, "Disk open failed");
         }
 
         fs = grub_fs_probe(dev2);
+
         if (!fs)
         {
             grub_device_close(dev2);
             return ventoy_set_check_result(9, "FS probe failed");
         }
 
+        if (!fs->fs_label)
+        {
+            grub_device_close(dev2);
+            return ventoy_set_check_result(10, "Partition label function unavailable");
+        }
+
         fs->fs_label(dev2, &label);
-        if ((!label) || grub_strncmp("VTOYEFI", label, 7))
+
+        if (!label || grub_strncmp("VTOYEFI", label, 7))
         {
             grub_device_close(dev2);
             return ventoy_set_check_result(10, "Partition name is not VTOYEFI");
@@ -2436,7 +2461,7 @@ static int ventoy_dynamic_tree_menu(img_iterator_node *node)
     img_iterator_node *child = NULL;
     const menu_tip *tip = NULL;
 
-    if (node->isocnt == 0 || node->done == 1)
+    if (node->done == 1)
     {
         return 0;
     }
@@ -2878,9 +2903,9 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         return grub_error(GRUB_ERR_BAD_ARGUMENT, "Must clear image before list");
     }
 
-    VTOY_CMD_CHECK(1);
+    VTOY_CMD_CHECK(2);
 
-    g_enumerate_time_checked  = 0;
+    g_enumerate_time_checked = 0;
     g_enumerate_start_time_ms = grub_get_time_ms();
 
     strdata = ventoy_get_env("VTOY_FILT_DOT_UNDERSCORE_FILE");
