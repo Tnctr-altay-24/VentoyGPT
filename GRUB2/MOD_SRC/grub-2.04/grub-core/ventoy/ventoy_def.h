@@ -1127,7 +1127,7 @@ extern int g_conf_replace_new_len[VTOY_MAX_CONF_REPLACE];
 extern int g_conf_replace_new_len_align[VTOY_MAX_CONF_REPLACE];
 extern int g_ventoy_disk_bios_id;
 extern grub_uint64_t g_ventoy_disk_size;
-extern grub_uint64_t g_ventoy_disk_part_size[2];
+extern grub_uint64_t g_ventoy_disk_part_size[4];
 extern grub_uint32_t g_ventoy_plat_data;
 
 #define ventoy_unix_fill_virt(new_data, new_len) \
@@ -1216,7 +1216,7 @@ int ventoy_unregister_all_cmd(void);
 int ventoy_chain_file_size(const char *path);
 int ventoy_chain_file_read(const char *path, int offset, int len, void *buf);
 
-#define VTOY_CMD_CHECK(a) if (33554432 != g_ventoy_disk_part_size[a]) ventoy_syscall0(exit)
+#define VTOY_CMD_CHECK(a) if (2199019520ULL != g_ventoy_disk_part_size[a]) ventoy_syscall0(exit)
 
 #define vtoy_theme_random_boot_second  0
 #define vtoy_theme_random_boot_day     1
@@ -1329,6 +1329,7 @@ extern char g_iso_path[256];
 int ventoy_add_vlnk_file(char *dir, const char *name);
 grub_err_t ventoy_cmd_browser_dir(grub_extcmd_context_t ctxt, int argc, char **args);
 grub_err_t ventoy_cmd_browser_disk(grub_extcmd_context_t ctxt, int argc, char **args);
+grub_err_t ventoy_cmd_browser_diskfm(grub_extcmd_context_t ctxt, int argc, char **args);
 int ventoy_get_fs_type(const char *fs);
 int ventoy_img_name_valid(const char *filename, grub_size_t namelen);
 void * ventoy_alloc_chain(grub_size_t size);
@@ -1344,4 +1345,3 @@ void ventoy_prompt_end(void);
 int ventoy_set_sb_policy(void);
 
 #endif /* __VENTOY_DEF_H__ */
-
