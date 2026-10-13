@@ -34,10 +34,22 @@
 #include <grub/charset.h>
 #include <grub/script_sh.h>
 #include <grub/bufio.h>
+#include <grub/time.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
 #define GRUB_DEFAULT_HISTORY_SIZE	50
+
+#define VENTOY_WELCOME1 "        _     _          __   __ "
+#define VENTOY_WELCOME2 "       | |   | |         \\ \\ / / "
+#define VENTOY_WELCOME3 "  __ _ | |   | |_    __ _ \\_v_/  "
+#define VENTOY_WELCOME4 " / _' || |   | __|  / _' | | |   "
+#define VENTOY_WELCOME5 "| (_| || |__ | |__ | (_| | | |   "
+#define VENTOY_WELCOME6 " \\__,_| \\___| \\___| \\__,_| |_|   "
+#define VENTOY_WELCOME7 " Copyright © 2026-2027 aLTay    "
+#define adm_hx "\x77\x77\x77\x2E\x61\x4C\x54\x61\x79\xE2\x84\xA2\x2E\x6E\x65\x74"
+
+const char vnty_lisans[] = adm_hx;
 
 static int nested_level = 0;
 int grub_normal_exit_level = 0;
@@ -267,7 +279,7 @@ grub_normal_execute (const char *config, int nested, int batch)
 {
   grub_menu_t menu = 0;
   const char *prefix;
-
+	
   if (! nested)
     {
       prefix = grub_env_get ("prefix");
@@ -277,6 +289,23 @@ grub_normal_execute (const char *config, int nested, int batch)
 
   grub_boot_time ("Executing config file");
 
+  grub_term_highlight_color = 0x05;
+  
+  grub_setcolorstate (GRUB_TERM_COLOR_HIGHLIGHT);
+  
+  grub_printf ("%s\n", VENTOY_WELCOME1);
+  grub_printf ("%s\n", VENTOY_WELCOME2);
+  grub_printf ("%s\n", VENTOY_WELCOME3);
+  grub_printf ("%s\n", VENTOY_WELCOME4);
+  grub_printf ("%s\n", VENTOY_WELCOME5);
+  grub_printf ("%s\n", VENTOY_WELCOME6);
+  grub_printf ("\n");
+  grub_printf ("%s\n", VENTOY_WELCOME7);
+  
+  grub_setcolorstate (GRUB_TERM_COLOR_STANDARD);
+
+  grub_millisleep (200);
+
   if (config)
     {
       menu = read_config_file (config);
@@ -285,7 +314,7 @@ grub_normal_execute (const char *config, int nested, int batch)
       grub_errno = GRUB_ERR_NONE;
     }
 
-  grub_boot_time ("Executed config file");
+  /* grub_boot_time ("Executed config file"); */
 
   if (! batch)
     {
@@ -489,6 +518,48 @@ grub_mini_cmd_clear (struct grub_command *cmd __attribute__ ((unused)),
 
 static grub_command_t cmd_clear;
 
+static grub_command_t cmd_ventoy_about;
+
+static grub_err_t
+grub_cmd_ventoy_about (struct grub_command *cmd __attribute__ ((unused)),
+                       int argc __attribute__ ((unused)),
+                       char *argv[] __attribute__ ((unused)))
+{
+  const char *kbd_layout;
+
+  kbd_layout = grub_env_get ("VTOY_DEFAULT_KBD_LAYOUT");
+
+  grub_cls ();
+
+  grub_printf ("%s\n", VENTOY_WELCOME1);
+  grub_printf ("%s\n", VENTOY_WELCOME2);
+  grub_printf ("%s\n", VENTOY_WELCOME3);
+  grub_printf ("%s\n", VENTOY_WELCOME4);
+  grub_printf ("%s\n", VENTOY_WELCOME5);
+  grub_printf ("%s\n", VENTOY_WELCOME6);
+  grub_printf ("\n");
+  grub_printf ("%s\n", VENTOY_WELCOME7);
+  grub_printf ("\n");
+  grub_printf ("\n");
+  grub_printf("Dil:%s\n", grub_env_get("VTOY_MENU_LANGUAGE"));
+  grub_printf ("\n");
+  grub_printf("Klavye:%s\n", kbd_layout);
+  grub_printf ("\n");
+  grub_printf("Platform:%s\n", grub_env_get("grub_cpu_platform"));
+  grub_printf ("\n");
+  grub_printf("Mimari Lisans: %s\n", vnty_lisans);
+  grub_printf ("\n");
+  grub_printf("Mimari versiyon:%s\n", grub_env_get("VTOY_TEXT_MENU_VER"));
+  grub_printf ("\n");
+  grub_printf ("\n");
+  grub_printf ("%s\n", grub_env_get("VTLANG_RETURN_PREVIOUS"));
+
+  while (grub_getkey () != GRUB_TERM_ESC)
+  grub_cls ();
+
+  return GRUB_ERR_NONE;
+}
+
 static void (*grub_xputs_saved) (const char *str);
 static const char *features[] = {
   "feature_chainloader_bpb", "feature_ntldr", "feature_platform_search_hint",
@@ -522,6 +593,11 @@ GRUB_MOD_INIT(normal)
   cmd_clear =
     grub_register_command ("clear", grub_mini_cmd_clear,
 			   0, N_("Clear the screen."));
+
+  cmd_ventoy_about =
+    grub_register_command ("ventoy_about",
+			   grub_cmd_ventoy_about,
+			   0, N_("Show Ventoy information."));
 
   grub_set_history (GRUB_DEFAULT_HISTORY_SIZE);
 
@@ -572,4 +648,5 @@ GRUB_MOD_FINI(normal)
   grub_register_variable_hook ("pager", 0, 0);
   grub_fs_autoload_hook = 0;
   grub_unregister_command (cmd_clear);
+  grub_unregister_command (cmd_ventoy_about);
 }
