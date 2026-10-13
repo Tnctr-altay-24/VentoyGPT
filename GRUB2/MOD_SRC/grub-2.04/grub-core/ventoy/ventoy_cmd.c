@@ -120,7 +120,7 @@ int g_conf_replace_new_len_align[VTOY_MAX_CONF_REPLACE] = { 0 };
 int g_ventoy_disk_bios_id = 0;
 ventoy_gpt_info *g_ventoy_part_info = NULL;
 grub_uint64_t g_ventoy_disk_size = 0;
-grub_uint64_t g_ventoy_disk_part_size[2];
+grub_uint64_t g_ventoy_disk_part_size[4];
 
 char *g_tree_script_buf = NULL;
 int g_tree_script_pos = 0;
@@ -573,9 +573,9 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(1 | 0x1000, "Internal Error");
     }
 
-    if (0 == ventoy_check_file_exist("(%s,2)/ventoy/ventoy.cpio", dev->disk->name) ||
-        0 == ventoy_check_file_exist("(%s,2)/grub/localboot.cfg", dev->disk->name) ||
-        0 == ventoy_check_file_exist("(%s,2)/tool/mount.exfat-fuse_aarch64", dev->disk->name))
+    if (0 == ventoy_check_file_exist("(%s,3)/ventoy/ventoy.cpio", dev->disk->name) ||
+        0 == ventoy_check_file_exist("(%s,3)/grub/localboot.cfg", dev->disk->name) ||
+        0 == ventoy_check_file_exist("(%s,3)/tool/mount.exfat-fuse_aarch64", dev->disk->name))
     {
         #ifndef GRUB_MACHINE_EFI
         if (0 == ventoy_check_file_exist("(ventoydisk)/ventoy/ventoy.cpio", dev->disk->name))
@@ -604,7 +604,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
     else
     {
-        file = ventoy_grub_file_open(VENTOY_FILE_TYPE, "(%s,2)/ventoy/ventoy.cpio", dev->disk->name);
+        file = ventoy_grub_file_open(VENTOY_FILE_TYPE, "(%s,3)/ventoy/ventoy.cpio", dev->disk->name);
     }
     if (!file)
     {
@@ -618,7 +618,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     partition = dev->disk->partition;
-    if (partition->number != 0 || partition->start != 2048)
+    if (partition->number != 2 || partition->start != 478009040)
     {
         return ventoy_set_check_result(5, "Ventoy partition is not start at 1MB");
     }
@@ -629,7 +629,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         {
             ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
             if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
-                (PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 65536)
+                (PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 4294960)
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -639,7 +639,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         {
             ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
             if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
-                PartTbl[1].SectorCount != 65536)
+                PartTbl[1].SectorCount != 4294960)
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -650,7 +650,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     {
         offset = partition->start + partition->len;
         partition = file->device->disk->partition;
-        if ((partition->number != 1) || (partition->len != 65536) || (offset != partition->start))
+        if ((partition->number != 1) || (partition->len != 4294960) || (offset != partition->start))
         {
             grub_file_close(file);
             return ventoy_set_check_result(7, "Disk partition layout check failed.");
@@ -661,7 +661,7 @@ static int ventoy_check_official_device(grub_device_t dev)
 
     if (workaround == 0)
     {
-        grub_snprintf(devname, sizeof(devname), "%s,2", dev->disk->name);
+        grub_snprintf(devname, sizeof(devname), "%s,3", dev->disk->name);
         dev2 = grub_device_open(devname);
         if (!dev2)
         {
@@ -2206,6 +2206,7 @@ int ventoy_fill_data(grub_uint32_t buflen, char *buffer)
     const char *fmt3 = NULL;
     grub_uint32_t *puint = (grub_uint32_t *)name;
     grub_uint32_t *puint2 = (grub_uint32_t *)plat;
+    const char tnctr[]={ 0x20, 0x20, 0x77, 0x77, 0x77, 0x2E, 0x61, 0x4C, 0x54, 0x61, 0x79, 0xE2, 0x84, 0xA2, 0x2E, 0x6E, 0x65, 0x74, 0x00 }; 
     const char fmtdata[]={ 0x39, 0x35, 0x25, 0x00, 0x35, 0x00, 0x23, 0x30, 0x30, 0x30, 0x30, 0x66, 0x66, 0x00 };
     const char fmtcode[]={
         0x22, 0x0A, 0x2B, 0x20, 0x68, 0x62, 0x6F, 0x78, 0x20, 0x7B, 0x0A, 0x20, 0x20, 0x74, 0x6F, 0x70,
@@ -2252,7 +2253,7 @@ int ventoy_fill_data(grub_uint32_t buflen, char *buffer)
     len = grub_snprintf(buffer, buflen, fmtcode,
                         fmt1 ? fmt1 : fmtdata,
                         fmt2 ? fmt2 : fmtdata + 4,
-                        value ? value : "", plat, guidstr,
+                        value ? value : "", plat, tnctr,
                         fmt3 ? fmt3 : fmtdata + 6);
     #pragma GCC diagnostic pop
 
@@ -5137,6 +5138,8 @@ int ventoy_load_part_table(const char *diskname)
 
     g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(0);
     g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(1);
+    g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
+    g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
     return 0;
 }
@@ -5211,6 +5214,8 @@ static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int arg
 
     g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(0);
     g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(1);
+    g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
+    g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
     return 0;
 }
@@ -7003,6 +7008,7 @@ int ventoy_env_init(void)
 static cmd_para ventoy_cmds[] =
 {
     { "vt_browser_disk",  ventoy_cmd_browser_disk,  0, NULL, "",   "",    NULL },
+    { "vt_browser_fm",  ventoy_cmd_browser_diskfm,  0, NULL, "",   "",    NULL },
     { "vt_browser_dir",  ventoy_cmd_browser_dir,  0, NULL, "",   "",    NULL },
     { "vt_incr",  ventoy_cmd_incr,  0, NULL, "{Var} {INT}",   "Increase integer variable",    NULL },
     { "vt_mod",  ventoy_cmd_mod,  0, NULL, "{Int} {Int} {Var}",   "mod integer variable",    NULL },
@@ -7205,5 +7211,3 @@ int ventoy_unregister_all_cmd(void)
 
     return 0;
 }
-
-
