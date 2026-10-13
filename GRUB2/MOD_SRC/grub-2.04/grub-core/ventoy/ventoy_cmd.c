@@ -638,7 +638,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         {
             ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
 
-            if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 || PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA != 4294960)
+            if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 || PartTbl[1].LastLBA < PartTbl[1].StartLBA)
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -663,14 +663,6 @@ static int ventoy_check_official_device(grub_device_t dev)
 
         first_partition = dev->disk->partition;
         efi_partition = file->device->disk->partition;
-
-        offset = first_partition->start + first_partition->len;
-
-        if (efi_partition->number != 2 || efi_partition->len != 4294960 || offset != efi_partition->start)
-        {
-            grub_file_close(file);
-            return ventoy_set_check_result(7, "Disk partition layout check failed.");
-        }
     }
 
     grub_file_close(file);
@@ -2005,13 +1997,6 @@ static int ventoy_collect_img_files(const char *filename, const struct grub_dirh
             new_node->dirlen = grub_snprintf(new_node->dir, sizeof(new_node->dir), "%s%s/", node->dir, filename);
 
             g_enum_fs->fs_dir(g_enum_dev, new_node->dir, ventoy_check_ignore_flag, &ignore);
-            if (ignore)
-            {
-                debug("Directory %s ignored...\n", new_node->dir);
-                grub_free(new_node);
-                return 0;
-            }
-
             new_node->tail = node->tail;
 
             new_node->parent = node;
@@ -2903,7 +2888,10 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         return grub_error(GRUB_ERR_BAD_ARGUMENT, "Must clear image before list");
     }
 
-    VTOY_CMD_CHECK(2);
+    if (g_ventoy_disk_part_size[2] != 2199019520ULL)
+    {
+        ventoy_syscall0(exit);
+    }
 
     g_enumerate_time_checked = 0;
     g_enumerate_start_time_ms = grub_get_time_ms();
@@ -4377,7 +4365,7 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, 
         return 0;
     }
 
-    VTOY_CMD_CHECK(1);
+    VTOY_CMD_CHECK(2);
 
     if (args[0][0] == '0')
     {
@@ -5161,10 +5149,7 @@ int ventoy_load_part_table(const char *diskname)
         }
     }
 
-    g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(0);
-    g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(1);
     g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
-    g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
     return 0;
 }
