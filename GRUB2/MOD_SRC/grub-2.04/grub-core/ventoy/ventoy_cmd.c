@@ -617,18 +617,36 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-    if (file->device == NULL || file->device->disk == NULL || file->device->disk->partition == NULL)
+    /*
+     * GPT3 CHECK:
+     * Validate the partition associated with the opened VTOYEFI file.
+     */
+    if (file->device == NULL || file->device->disk == NULL)
     {
         grub_file_close(file);
-        return ventoy_set_check_result(5, "VTOYEFI bolum bilgisi mevcut degil");
+        return ventoy_set_check_result(5, "VTOYEFI file device or disk is NULL");
     }
 
     partition = file->device->disk->partition;
 
-    if (partition->number != 2 || partition->start != 478009040)
+    if (partition == NULL || partition->number != 2 || partition->start != 478009040)
     {
+        grub_snprintf(
+            debugmsg,
+            sizeof(debugmsg),
+            "GPT3 CHECK: disk=%s part=%d start=%llu len=%llu",
+            file->device->disk->name,
+            partition ? partition->number : -1,
+            (unsigned long long)(
+                partition ? partition->start : 0
+            ),
+            (unsigned long long)(
+                partition ? partition->len : 0
+            )
+        );
+
         grub_file_close(file);
-        return ventoy_set_check_result(5, "VTOYEFI bolum bilgisi mevcut degil");
+        return ventoy_set_check_result(5, debugmsg);
     }
     
     if (workaround)
