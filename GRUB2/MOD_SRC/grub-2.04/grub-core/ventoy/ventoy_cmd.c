@@ -635,10 +635,9 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(5, "Invalid VTOYEFI partition");
      }
 
-	if (workaround)
+    if (workaround)
     {
-        if (grub_strncmp(
-            g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
+        if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
         {
             ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
 
@@ -650,23 +649,14 @@ static int ventoy_check_official_device(grub_device_t dev)
         }
         else
         {
-            ventoy_part_table *PartTbl =
-            g_ventoy_part_info->MBR.PartTbl;
+            ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
 
-          if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount || PartTbl[1].SectorCount != 4294960)
-          {
-              grub_file_close(file);
-              return ventoy_set_check_result(6, "Disk partition layout check failed.");
-          }
-        }
-    }
-    else
-    {
-        struct grub_partition *first_partition;
-        struct grub_partition *efi_partition;
-
-        first_partition = dev->disk->partition;
-        efi_partition = file->device->disk->partition;
+            if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount || PartTbl[1].SectorCount != 4294960)
+            {
+                 grub_file_close(file);
+                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
+            }
+         }
     }
 
     grub_file_close(file);
