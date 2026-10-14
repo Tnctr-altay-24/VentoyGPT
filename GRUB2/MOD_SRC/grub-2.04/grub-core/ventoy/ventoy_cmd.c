@@ -2949,39 +2949,21 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
     device_name = grub_file_get_device_name(args[0]);
     if (!device_name)
     {
-        grub_printf("DEBUG LIST: get_device_name FAILED\n");
-        grub_refresh();
-        grub_millisleep(5000);
         goto fail;
     }
-
-    grub_printf("DEBUG LIST: device=%s\n", device_name);
-    grub_refresh();
 
     g_enum_dev = dev = grub_device_open(device_name);
     if (!dev)
     {
-        grub_printf("DEBUG LIST: device_open FAILED\n");
-        grub_refresh();
-        grub_millisleep(5000);
         goto fail;
     }
-
-    grub_printf("DEBUG LIST: device_open PASSED\n");
-    grub_refresh();
 
     /* Probe filesystem once */
     g_enum_fs = fs = grub_fs_probe(dev);
     if (!fs)
     {
-        grub_printf("DEBUG LIST: fs_probe FAILED\n");
-        grub_refresh();
-        grub_millisleep(5000);
         goto fail;
     }
-
-    grub_printf("DEBUG LIST: filesystem=%s\n", fs->name);
-    grub_refresh();
 
     if (ventoy_get_fs_type(fs->name) >= ventoy_fs_max)
     {
@@ -3050,23 +3032,11 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         ventoy_control_get_flag("VTOY_FILE_FLT_VTOY");
 
     /* Scan directories exactly once */
-    grub_printf("DEBUG SCAN: before collect loop\n");
-    grub_refresh();
 
     for (node = &g_img_iterator_head; node; node = node->next)
     {
-        grub_printf("DEBUG SCAN: dir=%s level=%d\n",
-                    node->dir, node->level);
-        grub_refresh();
-
         fs->fs_dir(dev, node->dir, ventoy_collect_img_files, node);
-
-        grub_printf("DEBUG SCAN: returned dir=%s\n", node->dir);
-        grub_refresh();
     }
-
-    grub_printf("DEBUG SCAN: after collect loop\n");
-    grub_refresh();
 
     strdata = ventoy_get_env("VTOY_TREE_VIEW_MENU_STYLE");
     if (strdata && strdata[0] == '1' && strdata[1] == 0)
@@ -3074,29 +3044,12 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         g_tree_view_menu_style = 1;
     }
 
-    grub_printf("DEBUG MENU: before set_default_menu\n");
-    grub_refresh();
-
     ventoy_set_default_menu();
-
-    grub_printf("DEBUG MENU: after set_default_menu\n");
-    grub_refresh();
 
     for (node = &g_img_iterator_head; node; node = node->next)
     {
-        grub_printf("DEBUG TREE: before dynamic_tree_menu dir=%s\n",
-                    node->dir);
-        grub_refresh();
-
         ventoy_dynamic_tree_menu(node);
-
-        grub_printf("DEBUG TREE: after dynamic_tree_menu dir=%s\n",
-                    node->dir);
-        grub_refresh();
     }
-
-    grub_printf("DEBUG TREE: finished\n");
-    grub_refresh();
 
     /* Free iterator nodes */
     node = g_img_iterator_head.next;
@@ -3108,10 +3061,6 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
     }
 
     /* Sort image list by image name */
-    grub_printf("DEBUG SORT: before sorting count=%d list=%p\n",
-                g_ventoy_img_count, (void *)g_ventoy_img_list);
-    grub_refresh();
-
     while (g_ventoy_img_list)
     {
         min = g_ventoy_img_list;
@@ -3156,15 +3105,6 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
 
     g_ventoy_img_list = head;
 
-    grub_printf("DEBUG SORT: after sorting count=%d list=%p\n",
-                g_ventoy_img_count, (void *)g_ventoy_img_list);
-    grub_refresh();
-
-    /* Generate menu script */
-    grub_printf("DEBUG SCRIPT: before menu generation count=%d\n",
-                g_ventoy_img_count);
-    grub_refresh();
-
     if (g_default_menu_mode == 1)
     {
         vtoy_ssprintf(g_list_script_buf, g_list_script_pos,
@@ -3190,39 +3130,16 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
                                      : "common_menuentry");
     }
 
-    grub_printf("DEBUG SCRIPT: after menu generation\n");
-    grub_refresh();
-
     g_tree_script_buf[g_tree_script_pos] = 0;
     g_list_script_buf[g_list_script_pos] = 0;
 
-    grub_printf("DEBUG SCRIPT: list_pos=%d tree_pos=%d\n",
-                (int)g_list_script_pos, (int)g_tree_script_pos);
-    grub_printf("DEBUG SCRIPT: count=%d list=%p\n",
-                g_ventoy_img_count, (void *)g_ventoy_img_list);
-    grub_refresh();
-
     /* Set caller's image count variable once */
     grub_snprintf(buf, sizeof(buf), "%d", g_ventoy_img_count);
-
-    grub_printf("DEBUG SCRIPT: before env_set var=%s value=%s\n",
-                args[1], buf);
-    grub_refresh();
-
     grub_env_set(args[1], buf);
 
-    grub_printf("DEBUG SCRIPT: after env_set\n");
-    grub_refresh();
-
 fail:
-    grub_printf("DEBUG RETURN: entering fail label\n");
-    grub_refresh();
-
     check_free(device_name, grub_free);
     check_free(dev, grub_device_close);
-
-    grub_printf("DEBUG RETURN: cleanup completed\n");
-    grub_refresh();
 
     VENTOY_CMD_RETURN(GRUB_ERR_NONE);
 }
