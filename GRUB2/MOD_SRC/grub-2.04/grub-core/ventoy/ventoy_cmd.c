@@ -5265,33 +5265,31 @@ int ventoy_load_part_table(const char *diskname)
         return 1;
     }
 
-    g_ventoy_disk_size =
-        disk->total_sectors * (1U << disk->log_sector_size);
+    g_ventoy_disk_size = disk->total_sectors * (1U << disk->log_sector_size);
 
     g_ventoy_disk_bios_id = disk->id;
 
-    grub_disk_read(
-        disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info
-    );
-
+    grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
     grub_disk_close(disk);
 
     grub_snprintf(name, sizeof(name), "%s,1", diskname);
     dev = grub_device_open(name);
-
     if (dev)
     {
+        /* Check for official Ventoy device */
         ret = ventoy_check_official_device(dev);
         grub_device_close(dev);
 
         if (ret)
         {
-            ventoy_prompt_end();
-			return 1;
+            return 1;
         }
     }
 
+    g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(0);
+    g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(1);
     g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
+    g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
     return 0;
 }
@@ -5309,6 +5307,8 @@ static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int arg
         ventoy_prompt_end();
     }
 
+    g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(0);
+    g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(1);
     g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
     g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
