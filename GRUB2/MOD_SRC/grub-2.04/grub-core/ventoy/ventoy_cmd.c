@@ -5261,6 +5261,7 @@ int ventoy_load_part_table(const char *diskname)
     disk = grub_disk_open(diskname);
     if (!disk)
     {
+        debug("Failed to open disk %s\n", diskname);
         return 1;
     }
 
@@ -5269,35 +5270,28 @@ int ventoy_load_part_table(const char *diskname)
 
     g_ventoy_disk_bios_id = disk->id;
 
-    if (grub_disk_read(
-            disk, 0, 0,
-            sizeof(ventoy_gpt_info),
-            g_ventoy_part_info))
-    {
-        grub_disk_close(disk);
-        return 1;
-    }
+    grub_disk_read(
+        disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info
+    );
 
     grub_disk_close(disk);
 
     grub_snprintf(name, sizeof(name), "%s,1", diskname);
     dev = grub_device_open(name);
 
-    if (!dev)
+    if (dev)
     {
-        return 1;
+        ret = ventoy_check_official_device(dev);
+        grub_device_close(dev);
+
+        if (ret)
+        {
+            ventoy_prompt_end();
+			return 1;
+        }
     }
 
-    ret = ventoy_check_official_device(dev);
-    grub_device_close(dev);
-
-    if (ret)
-    {
-        return 1;
-    }
-
-    g_ventoy_disk_part_size[2] =
-        ventoy_get_vtoy_partsize(2);
+    g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
 
     return 0;
 }
