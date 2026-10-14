@@ -5272,7 +5272,7 @@ int ventoy_load_part_table(const char *diskname)
     grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
     grub_disk_close(disk);
 
-    grub_snprintf(name, sizeof(name), "%s,1", diskname);
+    grub_snprintf(name, sizeof(name), "%s,gpt3", diskname);
     dev = grub_device_open(name);
     if (dev)
     {
@@ -5292,6 +5292,61 @@ int ventoy_load_part_table(const char *diskname)
     g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
     return 0;
+}
+
+void ventoy_prompt_end(void)
+{
+    int op = 0;
+    char c;
+
+    grub_printf("\n\n\n");
+    grub_printf(" 1 --- Exit grub\n");
+    grub_printf(" 2 --- Reboot\n");
+    grub_printf(" 3 --- Shut down\n");
+    grub_printf("Please enter your choice: ");
+    grub_refresh();
+
+    while (1)
+    {
+        c = grub_getkey();
+        if (c >= '1' && c <= '3')
+        {
+            if (op == 0)
+            {
+                op = c - '0';
+                grub_printf("%c", c);
+                grub_refresh();
+            }
+        }
+        else if (c == '\r' || c == '\n')
+        {
+            if (op)
+            {
+                if (op == 1)
+                {
+                    grub_exit();
+                }
+                else if (op == 2)
+                {
+                    grub_reboot();
+                }
+                else if (op == 3)
+                {
+                    grub_script_execute_sourcecode("halt");
+                }
+            }
+        }
+        else if (c == '\b')
+        {
+            if (op)
+            {
+                op = 0;
+                grub_printf("\rPlease enter your choice:   ");
+                grub_printf("\rPlease enter your choice: ");
+                grub_refresh();
+            }
+        }
+    }
 }
 
 static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int argc, char **args)
@@ -7305,3 +7360,5 @@ int ventoy_unregister_all_cmd(void)
 
     return 0;
 }
+
+
