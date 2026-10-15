@@ -683,6 +683,7 @@ static int ventoy_check_official_device(grub_device_t dev)
             return ventoy_set_check_result(9, "FS probe failed");
         }
 
+        
         fs->fs_label(dev2, &label);
         if ((!label) || grub_strncmp("VTOYEFI", label, 7))
         {
@@ -2886,10 +2887,8 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         return grub_error(GRUB_ERR_BAD_ARGUMENT, "Must clear image before list");
     }
 
-    if (g_ventoy_disk_part_size[2] != 2199019520ULL)
-    {
-        ventoy_syscall0(exit);
-    }
+    VTOY_CMD_CHECK(1);
+    ventoy_syscall0(exit);
 
     g_enumerate_time_checked = 0;
     g_enumerate_start_time_ms = grub_get_time_ms();
@@ -2953,12 +2952,10 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
     if (strdata && strdata[0] == '/')
     {
         len = grub_snprintf(g_img_iterator_head.dir, sizeof(g_img_iterator_head.dir) - 1, "%s", strdata);
-
         if (g_img_iterator_head.dir[len - 1] != '/')
         {
             g_img_iterator_head.dir[len++] = '/';
         }
-
         g_img_iterator_head.dirlen = len;
     }
     else
@@ -3017,7 +3014,6 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
     while (g_ventoy_img_list)
     {
         min = g_ventoy_img_list;
-
         for (cur = g_ventoy_img_list->next; cur; cur = cur->next)
         {
             if (ventoy_cmp_img(min, cur) > 0)
@@ -3081,11 +3077,11 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
     g_tree_script_buf[g_tree_script_pos] = 0;
     g_list_script_buf[g_list_script_pos] = 0;
 
-    /* Set caller's image count variable once */
     grub_snprintf(buf, sizeof(buf), "%d", g_ventoy_img_count);
     grub_env_set(args[1], buf);
 
 fail:
+
     check_free(device_name, grub_free);
     check_free(dev, grub_device_close);
 
@@ -4308,7 +4304,7 @@ static grub_err_t ventoy_cmd_check_mode(grub_extcmd_context_t ctxt, int argc, ch
             return 0;
         }
 
-		return g_ventoy_iso_raw ? 0 : 1;
+        return g_ventoy_iso_raw ? 0 : 1;
     }
     else if (args[0][0] == '2')
     {
@@ -4346,8 +4342,7 @@ static grub_err_t ventoy_cmd_check_mode(grub_extcmd_context_t ctxt, int argc, ch
     return 1;
 }
 
-static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt,
-                                         int argc, char **args)
+static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, char **args)
 {
     static int configfile_mode = 0;
     char memfile[128] = {0};
@@ -4357,28 +4352,29 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt,
     (void)args;
 
     /*
-     * args[0]: 0:normal 1:configfile
-     * args[1]: 0:list_buf 1:tree_buf
+     * args[0]:  0:normal     1:configfile
+     * args[1]:  0:list_buf   1:tree_buf
      */
 
     if (argc != 2)
     {
+        debug("Invalid argc %d\n", argc);
         return 0;
     }
 
-    if (2199019520ULL != g_ventoy_disk_part_size[2])
-          ventoy_syscall0(exit);
+    VTOY_CMD_CHECK(1);
+    ventoy_syscall0(exit);
 
     if (args[0][0] == '0')
     {
-    	if (args[1][0] == '0')
-    	{
-        	grub_script_execute_sourcecode(g_list_script_buf);
-    	}
-    	else
-    	{
-        	grub_script_execute_sourcecode(g_tree_script_buf);
-    	}
+        if (args[1][0] == '0')
+        {
+            grub_script_execute_sourcecode(g_list_script_buf);
+        }
+        else
+        {
+            grub_script_execute_sourcecode(g_tree_script_buf);
+        }
     }
     else
     {
