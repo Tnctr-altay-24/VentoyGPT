@@ -597,7 +597,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         #endif
     }
 
-    /* We must have partition 2 */
+    /* We must have partition 3 */
     if (workaround)
     {
         file = ventoy_grub_file_open(VENTOY_FILE_TYPE, "%s", "(ventoydisk)/ventoy/ventoy.cpio");
@@ -635,7 +635,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
         {
             ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-            if ((PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 478009040)
+            if ((PartTbl == NULL) || (PartTbl[2].StartLBA != 478009040) || (PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 4294960))
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -644,7 +644,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         else
         {
             ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-            if (PartTbl[1].SectorCount != 478009040)
+            if (PartTbl[2].SectorCount != 4294960)
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -655,7 +655,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     {
         offset = partition->start + partition->len;
         partition = file->device->disk->partition;
-        if ((partition->number != 2) || (partition->len != 478009040) || (offset != partition->start))
+        if ((partition->number != 2) || (partition->start != 478009040) || (partition->len != 4294960) || (offset != partition->start))
         {
             grub_file_close(file);
             return ventoy_set_check_result(7, "Disk partition layout check failed.");
@@ -711,16 +711,16 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(13, "MBR sector read failed");
     }
 
-    grub_disk_close(disk);
-
     if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) != 0)
     {
         if (grub_memcmp(g_check_mbr_data, mbr, 0x30) || grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
         {
+            grub_disk_close(disk);
             return ventoy_set_check_result(12, "MBR check failed");
         }
     }
 
+    grub_disk_close(disk);
     return ventoy_set_check_result(0, NULL);
 }
 
