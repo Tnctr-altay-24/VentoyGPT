@@ -559,6 +559,7 @@ static int ventoy_check_official_device(grub_device_t dev)
 {
     int workaround = 0;
     grub_file_t file;
+    grub_uint64_t offset;
     char devname[64];
     grub_fs_t fs;
     grub_uint8_t mbr[512];
@@ -576,7 +577,6 @@ static int ventoy_check_official_device(grub_device_t dev)
         0 == ventoy_check_file_exist("(%s,3)/grub/localboot.cfg", dev->disk->name) ||
         0 == ventoy_check_file_exist("(%s,3)/tool/mount.exfat-fuse_aarch64", dev->disk->name))
     {
-
         #ifndef GRUB_MACHINE_EFI
         if (0 == ventoy_check_file_exist("(ventoydisk)/ventoy/ventoy.cpio", dev->disk->name))
         {
@@ -630,6 +630,40 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(5, "Invalid VTOYEFI partition");
     }
 
+    if (workaround)
+    {
+        if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
+        {
+            ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
+            if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
+                (PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 65536)
+            {
+                grub_file_close(file);
+                return ventoy_set_check_result(6, "Disk partition layout check failed.");
+            }
+        }
+        else
+        {
+            ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
+            if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
+                PartTbl[1].SectorCount != 65536)
+            {
+                grub_file_close(file);
+                return ventoy_set_check_result(6, "Disk partition layout check failed.");
+            }
+        }
+    }
+    else
+    {
+        offset = partition->start + partition->len;
+        partition = file->device->disk->partition;
+        if ((partition->number != 1) || (partition->len != 65536) || (offset != partition->start))
+        {
+            grub_file_close(file);
+            return ventoy_set_check_result(7, "Disk partition layout check failed.");
+        }
+    }
+
     grub_file_close(file);
 
     if (workaround == 0)
@@ -655,7 +689,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         }
 
         fs->fs_label(dev2, &label);
-        if (!label || grub_strncmp("VTOYEFI", label, 7))
+        if ((!label) || grub_strncmp("VTOYEFI", label, 7))
         {
             grub_device_close(dev2);
             return ventoy_set_check_result(10, "Partition name is not VTOYEFI");
@@ -1968,6 +2002,12 @@ static int ventoy_collect_img_files(const char *filename, const struct grub_dirh
             new_node->dirlen = grub_snprintf(new_node->dir, sizeof(new_node->dir), "%s%s/", node->dir, filename);
 
             g_enum_fs->fs_dir(g_enum_dev, new_node->dir, ventoy_check_ignore_flag, &ignore);
+            if (ignore)
+            {
+                debug("Directory %s ignored...\n", new_node->dir);
+                grub_free(new_node);
+                return 0;
+            }
 
             new_node->tail = node->tail;
 
@@ -2228,8 +2268,8 @@ int ventoy_fill_data(grub_uint32_t buflen, char *buffer)
     grub_memcpy(guidstr, &guid, sizeof(guid));
 
     puint2[0] = grub_swap_bytes32(g_ventoy_plat_data);
-	
-	/* Easter egg :) It will be appreciated if you reserve it, but NOT mandatory. */
+
+    /* Easter egg :) It will be appreciated if you reserve it, but NOT mandatory. */
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wformat-nonliteral"
     len = grub_snprintf(buffer, buflen, fmtcode,
@@ -4333,6 +4373,7 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, 
 
     if (argc != 2)
     {
+        debug("Invalid argc %d\n", argc);
         return 0;
     }
 
