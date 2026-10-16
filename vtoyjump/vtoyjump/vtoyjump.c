@@ -988,7 +988,7 @@ UINT64 GetVentoyEfiPartStartSector(HANDLE hDrive)
             return 0;
         }
 
-        StartSector = pGpt->PartTbl[1].StartLBA;
+        StartSector = pGpt->PartTbl[2].StartLBA;
         free(pGpt);
     }
     else
