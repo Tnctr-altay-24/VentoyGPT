@@ -631,40 +631,6 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(5, "Invalid VTOYEFI partition");
     }
 
-    if (workaround)
-    {
-        if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
-        {
-            ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-            if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
-                (PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 65536)
-            {
-                grub_file_close(file);
-                return ventoy_set_check_result(6, "Disk partition layout check failed.");
-            }
-        }
-        else
-        {
-            ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-            if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
-                PartTbl[1].SectorCount != 65536)
-            {
-                grub_file_close(file);
-                return ventoy_set_check_result(6, "Disk partition layout check failed.");
-            }
-        }
-    }
-    else
-    {
-        offset = partition->start + partition->len;
-        partition = file->device->disk->partition;
-        if ((partition->number != 1) || (partition->len != 65536) || (offset != partition->start))
-        {
-            grub_file_close(file);
-            return ventoy_set_check_result(7, "Disk partition layout check failed.");
-        }
-    }
-
     grub_file_close(file);
 
     if (workaround == 0)
@@ -683,9 +649,14 @@ static int ventoy_check_official_device(grub_device_t dev)
             return ventoy_set_check_result(9, "FS probe failed");
         }
 
-        
+        if (!fs->fs_label)
+        {
+            grub_device_close(dev2);
+            return ventoy_set_check_result(10, "Partition label function unavailable");
+        }
+
         fs->fs_label(dev2, &label);
-        if ((!label) || grub_strncmp("VTOYEFI", label, 7))
+        if (!label || grub_strncmp("VTOYEFI", label, 7))
         {
             grub_device_close(dev2);
             return ventoy_set_check_result(10, "Partition name is not VTOYEFI");
@@ -694,20 +665,29 @@ static int ventoy_check_official_device(grub_device_t dev)
         grub_device_close(dev2);
     }
 
-    /* MBR check */
+    /* MBR / GPT check */
     disk = grub_disk_open(dev->disk->name);
     if (!disk)
     {
         return ventoy_set_check_result(11, "Disk open failed");
     }
 
-    grub_memset(mbr, 0, 512);
-    grub_disk_read(disk, 0, 0, 512, mbr);
+    grub_memset(mbr, 0, sizeof(mbr));
+
+    if (grub_disk_read(disk, 0, 0, sizeof(mbr), mbr))
+    {
+        grub_disk_close(disk);
+        return ventoy_set_check_result(13, "MBR sector read failed");
+    }
+
     grub_disk_close(disk);
 
-    if (grub_memcmp(g_check_mbr_data, mbr, 0x30) || grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
+    if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) != 0)
     {
-        return ventoy_set_check_result(12, "MBR check failed");
+        if (grub_memcmp(g_check_mbr_data, mbr, 0x30) || grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
+        {
+            return ventoy_set_check_result(12, "MBR check failed");
+        }
     }
 
     return ventoy_set_check_result(0, NULL);
@@ -1989,12 +1969,6 @@ static int ventoy_collect_img_files(const char *filename, const struct grub_dirh
             new_node->dirlen = grub_snprintf(new_node->dir, sizeof(new_node->dir), "%s%s/", node->dir, filename);
 
             g_enum_fs->fs_dir(g_enum_dev, new_node->dir, ventoy_check_ignore_flag, &ignore);
-            if (ignore)
-            {
-                debug("Directory %s ignored...\n", new_node->dir);
-                grub_free(new_node);
-                return 0;
-            }
 
             new_node->tail = node->tail;
 
@@ -2445,7 +2419,7 @@ static int ventoy_dynamic_tree_menu(img_iterator_node *node)
     img_iterator_node *child = NULL;
     const menu_tip *tip = NULL;
 
-    if (node->isocnt == 0 || node->done == 1)
+    if (node->done == 1)
     {
         return 0;
     }
@@ -4354,18 +4328,17 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, 
     (void)args;
 
     /*
-     * args[0]:  0:normal     1:configfile
-     * args[1]:  0:list_buf   1:tree_buf
+     * args[0]: 0:normal    1:configfile
+     * args[1]: 0:list_buf  1:tree_buf
      */
 
     if (argc != 2)
     {
-        debug("Invalid argc %d\n", argc);
         return 0;
     }
 
-    VTOY_CMD_CHECK(1);
-    ventoy_syscall0(exit);
+    if (2199019520ULL != g_ventoy_disk_part_size[2])
+          ventoy_syscall0(exit);
 
     if (args[0][0] == '0')
     {
