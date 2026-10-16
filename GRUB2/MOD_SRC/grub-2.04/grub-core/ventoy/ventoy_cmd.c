@@ -559,7 +559,6 @@ static int ventoy_check_official_device(grub_device_t dev)
 {
     int workaround = 0;
     grub_file_t file;
-    grub_uint64_t offset;
     char devname[64];
     grub_fs_t fs;
     grub_uint8_t mbr[512];
