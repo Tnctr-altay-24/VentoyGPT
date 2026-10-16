@@ -635,7 +635,9 @@ static int ventoy_check_official_device(grub_device_t dev)
         if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
         {
             ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-            if ((PartTbl == NULL) || (PartTbl[2].StartLBA != 478009040) || (PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 4294960))
+            if ((PartTbl == NULL) || (PartTbl[2].StartLBA != 478009040) || ((PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 4294960) ||
+                (PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1) || (PartTbl[3].StartLBA != 482304000) ||
+                ((PartTbl[3].LastLBA + 1 - PartTbl[3].StartLBA) != 494467072))
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -644,7 +646,9 @@ static int ventoy_check_official_device(grub_device_t dev)
         else
         {
             ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-            if (PartTbl[2].SectorCount != 4294960)
+            if (PartTbl == NULL || PartTbl[2].StartSector != 478009040 || PartTbl[2].SectorCount != 4294960 ||
+                PartTbl[3].StartSector != PartTbl[2].StartSector + PartTbl[2].SectorCount ||
+                PartTbl[3].StartSector != 482304000 || PartTbl[3].SectorCount != 494467072)
             {
                 grub_file_close(file);
                 return ventoy_set_check_result(6, "Disk partition layout check failed.");
