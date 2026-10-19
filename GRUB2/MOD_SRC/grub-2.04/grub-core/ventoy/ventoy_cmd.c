@@ -646,8 +646,22 @@ static int ventoy_check_official_device(grub_device_t dev)
         grub_printf("file partition: NULL\n");
     }
 
-    grub_refresh();
-    grub_millisleep(5000);
+    if (dev->disk->partition != NULL)
+	{
+    	grub_printf("dev partition start: %llu\n", (unsigned long long)dev->disk->partition->start);
+    	grub_printf("dev partition len: %llu\n", (unsigned long long)dev->disk->partition->len);
+	}
+
+	if (file->device->disk->partition != NULL)
+	{
+    	grub_printf("file partition start: %llu\n",
+                	(unsigned long long)file->device->disk->partition->start);
+    	grub_printf("file partition len: %llu\n",
+        	        (unsigned long long)file->device->disk->partition->len);
+	}
+
+	grub_refresh();
+	grub_millisleep(5000);
 	
 	partition = file->device->disk->partition;
     if (partition == NULL || partition->number != 2 || partition->start != 478009040)
