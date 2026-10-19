@@ -659,9 +659,6 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_printf("file partition len: %llu\n",
         	        (unsigned long long)file->device->disk->partition->len);
 	}
-
-	grub_refresh();
-	grub_millisleep(5000);
 	
 	partition = file->device->disk->partition;
     if (partition == NULL || partition->number != 2 || partition->start != 478009040)
@@ -682,9 +679,6 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_printf("dev part len = %llu\n",
                 	(unsigned long long)dev->disk->partition->len);
 	}
-
-	grub_refresh();
-	grub_millisleep(5000);
 	
 	if (workaround)
     {
@@ -713,12 +707,59 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
     else
     {
+        /* Debug: inspect the initial partition before calculating offset */
+        grub_printf("BEFORE offset calculation:\n");
+
+        if (partition == NULL)
+        {
+            grub_printf("initial partition = NULL\n");
+            grub_file_close(file);
+            return ventoy_set_check_result(
+                7, "Initial partition is NULL.");
+        }
+
+        grub_printf("initial partition number = %d\n",
+                    partition->number);
+        grub_printf("initial partition start = %llu\n",
+                    (unsigned long long)partition->start);
+        grub_printf("initial partition len = %llu\n",
+                    (unsigned long long)partition->len);
+
         offset = partition->start + partition->len;
+
+        grub_printf("calculated offset = %llu\n",
+                    (unsigned long long)offset);
+
         partition = file->device->disk->partition;
-        if ((partition->number != 2) || (partition->start != 478009040) || (partition->len != 4294960) || (offset != partition->start))
+
+        grub_printf("FILE partition:\n");
+
+        if (partition == NULL)
+        {
+            grub_printf("file partition = NULL\n");
+            grub_file_close(file);
+            return ventoy_set_check_result(
+                7, "File partition is NULL.");
+        }
+
+        grub_printf("file partition number = %d\n",
+                    partition->number);
+        grub_printf("file partition start = %llu\n",
+                    (unsigned long long)partition->start);
+        grub_printf("file partition len = %llu\n",
+                    (unsigned long long)partition->len);
+
+        grub_refresh();
+        grub_millisleep(5000);
+
+        if ((partition->number != 2) ||
+            (partition->start != 478009040) ||
+            (partition->len != 4294960) ||
+            (offset != partition->start))
         {
             grub_file_close(file);
-            return ventoy_set_check_result(7, "Disk partition layout check failed.");
+            return ventoy_set_check_result(
+                7, "Disk partition layout check failed.");
         }
     }
 
