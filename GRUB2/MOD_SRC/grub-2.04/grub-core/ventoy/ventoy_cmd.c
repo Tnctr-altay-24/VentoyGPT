@@ -623,64 +623,14 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(5, "VTOYEFI file device or disk is NULL");
     }
 
-    grub_printf("dev disk: %s\n", dev->disk->name);
-    grub_printf("file disk: %s\n", file->device->disk->name);
-
-    if (dev->disk->partition != NULL)
-    {
-        grub_printf("dev partition number: %d\n",
-                dev->disk->partition->number);
-    }
-    else
-    {
-        grub_printf("dev partition: NULL\n");
-    }
-
-    if (file->device->disk->partition != NULL)
-    {
-        grub_printf("file partition number: %d\n",
-                file->device->disk->partition->number);
-    }
-    else
-    {
-        grub_printf("file partition: NULL\n");
-    }
-
-    if (dev->disk->partition != NULL)
-	{
-    	grub_printf("dev partition start: %llu\n", (unsigned long long)dev->disk->partition->start);
-    	grub_printf("dev partition len: %llu\n", (unsigned long long)dev->disk->partition->len);
-	}
-
-	if (file->device->disk->partition != NULL)
-	{
-    	grub_printf("file partition start: %llu\n",
-                	(unsigned long long)file->device->disk->partition->start);
-    	grub_printf("file partition len: %llu\n",
-        	        (unsigned long long)file->device->disk->partition->len);
-	}
-	
-	partition = file->device->disk->partition;
+    partition = file->device->disk->partition;
     if (partition == NULL || partition->number != 2 || partition->start != 478009040)
     {
         grub_file_close(file);
         return ventoy_set_check_result(5, "Invalid VTOYEFI partition");
     }
 
-    grub_printf("workaround = %d\n", workaround);
-	grub_printf("dev disk = %s\n", dev->disk->name);
-
-	if (dev->disk->partition)
-	{
-    	grub_printf("dev part number = %d\n",
-                	dev->disk->partition->number);
-    	grub_printf("dev part start = %llu\n",
-                	(unsigned long long)dev->disk->partition->start);
-    	grub_printf("dev part len = %llu\n",
-                	(unsigned long long)dev->disk->partition->len);
-	}
-	
-	if (workaround)
+    if (workaround)
     {
         if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
         {
@@ -707,59 +657,12 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
     else
     {
-        /* Debug: inspect the initial partition before calculating offset */
-        grub_printf("BEFORE offset calculation:\n");
-
-        if (partition == NULL)
-        {
-            grub_printf("initial partition = NULL\n");
-            grub_file_close(file);
-            return ventoy_set_check_result(
-                7, "Initial partition is NULL.");
-        }
-
-        grub_printf("initial partition number = %d\n",
-                    partition->number);
-        grub_printf("initial partition start = %llu\n",
-                    (unsigned long long)partition->start);
-        grub_printf("initial partition len = %llu\n",
-                    (unsigned long long)partition->len);
-
         offset = partition->start + partition->len;
-
-        grub_printf("calculated offset = %llu\n",
-                    (unsigned long long)offset);
-
         partition = file->device->disk->partition;
-
-        grub_printf("FILE partition:\n");
-
-        if (partition == NULL)
-        {
-            grub_printf("file partition = NULL\n");
-            grub_file_close(file);
-            return ventoy_set_check_result(
-                7, "File partition is NULL.");
-        }
-
-        grub_printf("file partition number = %d\n",
-                    partition->number);
-        grub_printf("file partition start = %llu\n",
-                    (unsigned long long)partition->start);
-        grub_printf("file partition len = %llu\n",
-                    (unsigned long long)partition->len);
-
-        grub_refresh();
-        grub_millisleep(5000);
-
-        if ((partition->number != 2) ||
-            (partition->start != 478009040) ||
-            (partition->len != 4294960) ||
-            (offset != partition->start))
+        if ((partition->number != 2) || (partition->start != 478009040) || (partition->len != 4294960) || (offset != 482304000))
         {
             grub_file_close(file);
-            return ventoy_set_check_result(
-                7, "Disk partition layout check failed.");
+            return ventoy_set_check_result(7, "Disk partition layout check failed.");
         }
     }
 
@@ -7335,5 +7238,3 @@ int ventoy_unregister_all_cmd(void)
 
     return 0;
 }
-
-
