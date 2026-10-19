@@ -623,7 +623,33 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(5, "VTOYEFI file device or disk is NULL");
     }
 
-    partition = file->device->disk->partition;
+    grub_printf("dev disk: %s\n", dev->disk->name);
+    grub_printf("file disk: %s\n", file->device->disk->name);
+
+    if (dev->disk->partition != NULL)
+    {
+        grub_printf("dev partition number: %d\n",
+                dev->disk->partition->number);
+    }
+    else
+    {
+        grub_printf("dev partition: NULL\n");
+    }
+
+    if (file->device->disk->partition != NULL)
+    {
+        grub_printf("file partition number: %d\n",
+                file->device->disk->partition->number);
+    }
+    else
+    {
+        grub_printf("file partition: NULL\n");
+    }
+
+    grub_refresh();
+    grub_millisleep(5000);
+	
+	partition = file->device->disk->partition;
     if (partition == NULL || partition->number != 2 || partition->start != 478009040)
     {
         grub_file_close(file);
