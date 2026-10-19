@@ -670,7 +670,23 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(5, "Invalid VTOYEFI partition");
     }
 
-    if (workaround)
+    grub_printf("workaround = %d\n", workaround);
+	grub_printf("dev disk = %s\n", dev->disk->name);
+
+	if (dev->disk->partition)
+	{
+    	grub_printf("dev part number = %d\n",
+                	dev->disk->partition->number);
+    	grub_printf("dev part start = %llu\n",
+                	(unsigned long long)dev->disk->partition->start);
+    	grub_printf("dev part len = %llu\n",
+                	(unsigned long long)dev->disk->partition->len);
+	}
+
+	grub_refresh();
+	grub_millisleep(5000);
+	
+	if (workaround)
     {
         if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
         {
