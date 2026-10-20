@@ -647,15 +647,33 @@ static int ventoy_check_official_device(grub_device_t dev)
         }
     }
     else
-    {
-        offset = partition->start + partition->len;
-        partition = file->device->disk->partition;
-        if ((partition->number != 3) || (partition->len != 494467072) || (offset != partition->start))
-        {
-            grub_file_close(file);
-            return ventoy_set_check_result(7, "Disk partition layout check failed.");
-        }
-    }
+	{
+    	offset = partition->start + partition->len;
+    	partition = file->device->disk->partition;
+
+    	grub_printf("DEBUG 7: partition number = %u\n", (unsigned int)partition->number);
+    	grub_printf("DEBUG 7: partition start = %llu\n", (unsigned long long)partition->start);
+    	grub_printf("DEBUG 7: partition len = %llu\n", (unsigned long long)partition->len);
+    	grub_printf("DEBUG 7: offset = %llu\n", (unsigned long long)offset);
+    	grub_printf("DEBUG 7: number check = %d\n", partition->number != 3);
+
+    	grub_printf(
+        	"DEBUG 7: length check = %d\n",
+        	partition->len != 494467072);
+
+    	grub_printf(
+        	"DEBUG 7: offset check = %d\n",
+        	offset != partition->start);
+
+    	if ((partition->number != 3) ||
+        	(partition->len != 494467072) ||
+        	(offset != partition->start))
+    	{
+        	grub_file_close(file);
+        	return ventoy_set_check_result(
+            	7, "Disk partition layout check failed.");
+    	}
+	}
     grub_file_close(file);
 
     if (workaround == 0)
