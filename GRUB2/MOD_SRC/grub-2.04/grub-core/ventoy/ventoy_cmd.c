@@ -732,6 +732,38 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(11, "Disk open failed");
     }
 
+	grub_printf("DEBUG 12: MBR comparison\n");
+
+grub_printf("DEBUG 12: expected first 48 bytes:\n");
+for (unsigned int i = 0; i < 0x30; i++)
+{
+    grub_printf("%02x ", (unsigned char)g_check_mbr_data[i]);
+}
+grub_printf("\n");
+
+grub_printf("DEBUG 12: actual first 48 bytes:\n");
+for (unsigned int i = 0; i < 0x30; i++)
+{
+    grub_printf("%02x ", (unsigned char)mbr[i]);
+}
+grub_printf("\n");
+
+grub_printf("DEBUG 12: expected bytes at 0x190:\n");
+for (unsigned int i = 0; i < 16; i++)
+{
+    grub_printf("%02x ",
+        (unsigned char)g_check_mbr_data[0x30 + i]);
+}
+grub_printf("\n");
+
+grub_printf("DEBUG 12: actual bytes at 0x190:\n");
+for (unsigned int i = 0; i < 16; i++)
+{
+    grub_printf("%02x ", (unsigned char)mbr[0x190 + i]);
+}
+grub_printf("\n");
+grub_millisleep(5000);
+
     grub_memset(mbr, 0, 512);
     grub_disk_read(disk, 0, 0, 512, mbr);
     grub_disk_close(disk);
