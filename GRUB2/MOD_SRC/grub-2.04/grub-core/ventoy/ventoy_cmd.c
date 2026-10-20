@@ -647,38 +647,56 @@ static int ventoy_check_official_device(grub_device_t dev)
         }
     }
     else
-	{
-    	offset = partition->start + partition->len;
-    	partition = file->device->disk->partition;
+{
+    offset = partition->start + partition->len;
 
-    	grub_printf("DEBUG 7: partition number = %u\n",
-        	(unsigned int)partition->number);
-    	grub_printf("DEBUG 7: partition start = %llu\n",
-        	(unsigned long long)partition->start);
-    	grub_printf("DEBUG 7: partition len = %llu\n",
-        	(unsigned long long)partition->len);
-    	grub_printf("DEBUG 7: offset = %llu\n",
-        	(unsigned long long)offset);
+    grub_snprintf(devname, sizeof(devname),
+        "%s,4", dev->disk->name);
 
-    	grub_printf("DEBUG 7: number check = %d\n",
-        	partition->number != 3);
-    	grub_printf("DEBUG 7: length check = %d\n",
-        	partition->len != 494467072);
-    	grub_printf("DEBUG 7: offset check = %d\n",
-        	offset != partition->start);
+    dev2 = grub_device_open(devname);
+    if (!dev2)
+    {
+        grub_file_close(file);
+        return ventoy_set_check_result(
+            7, "ISO partition open failed.");
+    }
 
-    	if (partition->number != 3 ||
-        	partition->len != 494467072 ||
-        	offset != partition->start)
-    	{
-        	grub_printf("ERROR 7: Disk partition layout check failed.\n");
+    partition = dev2->disk->partition;
 
-        	grub_millisleep(5000);
+    grub_printf("DEBUG 7: partition number = %u\n",
+        (unsigned int)partition->number);
+    grub_printf("DEBUG 7: partition start = %llu\n",
+        (unsigned long long)partition->start);
+    grub_printf("DEBUG 7: partition len = %llu\n",
+        (unsigned long long)partition->len);
+    grub_printf("DEBUG 7: offset = %llu\n",
+        (unsigned long long)offset);
 
-        	grub_file_close(file);
-        	return ventoy_set_check_result(
-            	7, "Disk partition layout check failed.");
-    	}
+    grub_printf("DEBUG 7: number check = %d\n",
+        partition->number != 3);
+    grub_printf("DEBUG 7: length check = %d\n",
+        partition->len != 494467072);
+    grub_printf("DEBUG 7: offset check = %d\n",
+        offset != partition->start);
+
+    if (partition->number != 3 ||
+        partition->len != 494467072 ||
+        offset != partition->start)
+    {
+        grub_printf(
+            "ERROR 7: Disk partition layout check failed.\n");
+
+        grub_millisleep(5000);
+
+        grub_device_close(dev2);
+        grub_file_close(file);
+
+        return ventoy_set_check_result(
+            7, "Disk partition layout check failed.");
+    }
+
+    grub_device_close(dev2);
+}
 	}
     grub_file_close(file);
 
