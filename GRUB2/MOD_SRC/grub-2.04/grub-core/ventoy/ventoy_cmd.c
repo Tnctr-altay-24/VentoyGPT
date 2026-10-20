@@ -647,7 +647,7 @@ static int ventoy_check_official_device(grub_device_t dev)
         }
     }
     else
-{
+    {
     offset = partition->start + partition->len;
 
     grub_snprintf(devname, sizeof(devname),
@@ -696,7 +696,6 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     grub_device_close(dev2);
-}
 	}
     grub_file_close(file);
 
