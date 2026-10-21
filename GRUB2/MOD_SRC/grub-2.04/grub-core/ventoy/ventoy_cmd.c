@@ -653,6 +653,11 @@ static int ventoy_check_official_device(grub_device_t dev)
 
     if (workaround)
 {
+    grub_printf("\n===== WORKAROUND DEBUG =====\n");
+    grub_printf("workaround = %d\n", workaround);
+    grub_printf("GPT signature = %.8s\n",
+                g_ventoy_part_info->Head.Signature);
+
     if (grub_strncmp(g_ventoy_part_info->Head.Signature,
                      "EFI PART", 8) == 0)
     {
@@ -666,20 +671,26 @@ static int ventoy_check_official_device(grub_device_t dev)
             PartTbl[2].LastLBA + 1;
 
         grub_printf("\n===== GPT DEBUG =====\n");
+        grub_printf("Partition table type = GPT\n");
+        grub_printf("PartTbl address = %p\n", (void *)PartTbl);
+
         grub_printf("GPT3 StartLBA = %llu\n",
             (unsigned long long)PartTbl[2].StartLBA);
         grub_printf("GPT3 LastLBA = %llu\n",
             (unsigned long long)PartTbl[2].LastLBA);
         grub_printf("GPT3 Length = %llu\n",
             (unsigned long long)gpt3_len);
-        grub_printf("GPT4 StartLBA = %llu\n",
-            (unsigned long long)PartTbl[3].StartLBA);
         grub_printf("GPT3 Next LBA = %llu\n",
             (unsigned long long)gpt3_next);
 
-        grub_printf("GPT length check = %d\n",
+        grub_printf("GPT4 StartLBA = %llu\n",
+            (unsigned long long)PartTbl[3].StartLBA);
+        grub_printf("GPT4 LastLBA = %llu\n",
+            (unsigned long long)PartTbl[3].LastLBA);
+
+        grub_printf("GPT length check failed = %d\n",
             gpt3_len != 4294960);
-        grub_printf("GPT adjacency check = %d\n",
+        grub_printf("GPT adjacency check failed = %d\n",
             PartTbl[3].StartLBA != gpt3_next);
 
         grub_millisleep(5000);
@@ -687,10 +698,13 @@ static int ventoy_check_official_device(grub_device_t dev)
         if (gpt3_len != 4294960 ||
             PartTbl[3].StartLBA != gpt3_next)
         {
+            grub_printf("ERROR: GPT layout check failed.\n");
             grub_file_close(file);
             return ventoy_set_check_result(
                 6, "Disk partition layout check failed.");
         }
+
+        grub_printf("GPT layout check PASSED.\n");
     }
     else
     {
@@ -698,49 +712,98 @@ static int ventoy_check_official_device(grub_device_t dev)
             g_ventoy_part_info->MBR.PartTbl;
 
         grub_uint64_t mbr3_next =
-            PartTbl[2].StartSectorId + PartTbl[2].SectorCount;
+            (grub_uint64_t)PartTbl[2].StartSectorId +
+            PartTbl[2].SectorCount;
 
         grub_printf("\n===== MBR DEBUG =====\n");
-        grub_printf("MBR3 StartSector = %llu\n",
-            (unsigned long long)PartTbl[2].StartSectorId);
+        grub_printf("Partition table type = MBR (signature != EFI PART)\n");
+        grub_printf("PartTbl address = %p\n", (void *)PartTbl);
+
+        grub_printf("MBR3 StartSector = %u\n",
+            (unsigned int)PartTbl[2].StartSectorId);
         grub_printf("MBR3 SectorCount = %u\n",
             (unsigned int)PartTbl[2].SectorCount);
-        grub_printf("MBR4 StartSector = %u\n",
-            (unsigned int)PartTbl[3].StartSectorId);
         grub_printf("MBR3 NextSector = %llu\n",
             (unsigned long long)mbr3_next);
 
-        grub_printf("MBR length check = %d\n",
+        grub_printf("MBR4 StartSector = %u\n",
+            (unsigned int)PartTbl[3].StartSectorId);
+        grub_printf("MBR4 SectorCount = %u\n",
+            (unsigned int)PartTbl[3].SectorCount);
+
+        grub_printf("MBR length check failed = %d\n",
             PartTbl[2].SectorCount != 4294960);
-        grub_printf("MBR adjacency check = %d\n",
-            PartTbl[3].StartSectorId != mbr3_next);
+        grub_printf("MBR adjacency check failed = %d\n",
+            (grub_uint64_t)PartTbl[3].StartSectorId != mbr3_next);
 
         grub_millisleep(5000);
 
         if (PartTbl[2].SectorCount != 4294960 ||
-            PartTbl[3].StartSectorId != mbr3_next)
+            (grub_uint64_t)PartTbl[3].StartSectorId != mbr3_next)
         {
+            grub_printf("ERROR: MBR layout check failed.\n");
             grub_file_close(file);
             return ventoy_set_check_result(
                 6, "Disk partition layout check failed.");
         }
+
+        grub_printf("MBR layout check PASSED.\n");
     }
 }
 else
 {
-    /* Önce mevcut bölümün bitiş sektörünü hesapla. */
-    offset = partition->start + partition->len;
-
     grub_printf("\n===== PARTITION DEBUG =====\n");
-    grub_printf("Previous partition start = %llu\n",
-        (unsigned long long)partition->start);
-    grub_printf("Previous partition len = %llu\n",
-        (unsigned long long)partition->len);
-    grub_printf("Calculated next start = %llu\n",
-        (unsigned long long)offset);
+    grub_printf("workaround = %d\n", workaround);
 
-    /* Disk üzerindeki geçerli bölüm işaretçisini tekrar al. */
+    /*
+     * İlk olarak mevcut partition işaretçisini incele.
+     * Bu bilgiler, işaretçiyi yeniden almadan önce yazdırılır.
+     */
+    grub_printf("Original partition pointer = %p\n",
+                (void *)partition);
+
+    if (partition != NULL)
+    {
+        grub_printf("Original partition number = %d\n",
+            partition->number);
+        grub_printf("Original partition start = %llu\n",
+            (unsigned long long)partition->start);
+        grub_printf("Original partition len = %llu\n",
+            (unsigned long long)partition->len);
+
+        offset = partition->start + partition->len;
+
+        grub_printf("Calculated next start = %llu\n",
+            (unsigned long long)offset);
+    }
+    else
+    {
+        grub_printf("ERROR: Original partition pointer is NULL.\n");
+        grub_file_close(file);
+        return ventoy_set_check_result(
+            7, "Disk partition layout check failed.");
+    }
+
+    /*
+     * Disk nesnesindeki partition işaretçisini ayrı olarak incele.
+     */
+    grub_printf("Disk pointer = %p\n",
+                (void *)file->device->disk);
+    grub_printf("Disk partition pointer = %p\n",
+                (void *)file->device->disk->partition);
+
     partition = file->device->disk->partition;
+
+    grub_printf("Current partition pointer = %p\n",
+                (void *)partition);
+
+    if (partition == NULL)
+    {
+        grub_printf("ERROR: Current partition pointer is NULL.\n");
+        grub_file_close(file);
+        return ventoy_set_check_result(
+            7, "Disk partition layout check failed.");
+    }
 
     grub_printf("Current partition number = %d\n",
         partition->number);
@@ -773,6 +836,8 @@ else
         return ventoy_set_check_result(
             7, "Disk partition layout check failed.");
     }
+
+    grub_printf("Partition layout check PASSED.\n");
 }
 
 grub_file_close(file);
