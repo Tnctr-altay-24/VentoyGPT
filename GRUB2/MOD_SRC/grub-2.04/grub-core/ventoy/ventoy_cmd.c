@@ -652,40 +652,130 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     if (workaround)
+{
+    if (grub_strncmp(g_ventoy_part_info->Head.Signature,
+                     "EFI PART", 8) == 0)
     {
-        if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
+        ventoy_gpt_part_tbl *PartTbl =
+            g_ventoy_part_info->PartTbl;
+
+        grub_uint64_t gpt3_len =
+            PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA;
+
+        grub_uint64_t gpt3_next =
+            PartTbl[2].LastLBA + 1;
+
+        grub_printf("\n===== GPT DEBUG =====\n");
+        grub_printf("GPT3 StartLBA = %llu\n",
+            (unsigned long long)PartTbl[2].StartLBA);
+        grub_printf("GPT3 LastLBA = %llu\n",
+            (unsigned long long)PartTbl[2].LastLBA);
+        grub_printf("GPT3 Length = %llu\n",
+            (unsigned long long)gpt3_len);
+        grub_printf("GPT4 StartLBA = %llu\n",
+            (unsigned long long)PartTbl[3].StartLBA);
+        grub_printf("GPT3 Next LBA = %llu\n",
+            (unsigned long long)gpt3_next);
+
+        grub_printf("GPT length check = %d\n",
+            gpt3_len != 4294960);
+        grub_printf("GPT adjacency check = %d\n",
+            PartTbl[3].StartLBA != gpt3_next);
+
+        grub_millisleep(5000);
+
+        if (gpt3_len != 4294960 ||
+            PartTbl[3].StartLBA != gpt3_next)
         {
-            ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-            if (PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1 ||
-                (PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 4294960)
-            {
-                grub_file_close(file);
-                return ventoy_set_check_result(6, "Disk partition layout check failed.");
-            }
-        }
-        else
-        {
-            ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-            if (PartTbl[3].StartSectorId != PartTbl[2].StartSectorId + PartTbl[2].SectorCount ||
-                PartTbl[2].SectorCount != 4294960)
-            {
-                grub_file_close(file);
-                return ventoy_set_check_result(6, "Disk partition layout check failed.");
-            }
+            grub_file_close(file);
+            return ventoy_set_check_result(
+                6, "Disk partition layout check failed.");
         }
     }
     else
     {
-        offset = partition->start + partition->len;
-        partition = file->device->disk->partition;
-        if ((partition->number != 3) || (partition->len != 494467072) || (offset != partition->start))
+        ventoy_part_table *PartTbl =
+            g_ventoy_part_info->MBR.PartTbl;
+
+        grub_uint64_t mbr3_next =
+            PartTbl[2].StartSectorId + PartTbl[2].SectorCount;
+
+        grub_printf("\n===== MBR DEBUG =====\n");
+        grub_printf("MBR3 StartSector = %llu\n",
+            (unsigned long long)PartTbl[2].StartSectorId);
+        grub_printf("MBR3 SectorCount = %u\n",
+            (unsigned int)PartTbl[2].SectorCount);
+        grub_printf("MBR4 StartSector = %u\n",
+            (unsigned int)PartTbl[3].StartSectorId);
+        grub_printf("MBR3 NextSector = %llu\n",
+            (unsigned long long)mbr3_next);
+
+        grub_printf("MBR length check = %d\n",
+            PartTbl[2].SectorCount != 4294960);
+        grub_printf("MBR adjacency check = %d\n",
+            PartTbl[3].StartSectorId != mbr3_next);
+
+        grub_millisleep(5000);
+
+        if (PartTbl[2].SectorCount != 4294960 ||
+            PartTbl[3].StartSectorId != mbr3_next)
         {
             grub_file_close(file);
-            return ventoy_set_check_result(7, "Disk partition layout check failed.");
+            return ventoy_set_check_result(
+                6, "Disk partition layout check failed.");
         }
-    }    
+    }
+}
+else
+{
+    /* Önce mevcut bölümün bitiş sektörünü hesapla. */
+    offset = partition->start + partition->len;
 
-	grub_file_close(file);
+    grub_printf("\n===== PARTITION DEBUG =====\n");
+    grub_printf("Previous partition start = %llu\n",
+        (unsigned long long)partition->start);
+    grub_printf("Previous partition len = %llu\n",
+        (unsigned long long)partition->len);
+    grub_printf("Calculated next start = %llu\n",
+        (unsigned long long)offset);
+
+    /* Disk üzerindeki geçerli bölüm işaretçisini tekrar al. */
+    partition = file->device->disk->partition;
+
+    grub_printf("Current partition number = %d\n",
+        partition->number);
+    grub_printf("Current partition start = %llu\n",
+        (unsigned long long)partition->start);
+    grub_printf("Current partition len = %llu\n",
+        (unsigned long long)partition->len);
+
+    grub_printf("Number mismatch = %d\n",
+        partition->number != 3);
+    grub_printf("Length mismatch = %d\n",
+        partition->len != 494467072);
+    grub_printf("Start mismatch = %d\n",
+        offset != partition->start);
+
+    grub_printf("Partition layout OK = %d\n",
+        partition->number == 3 &&
+        partition->len == 494467072 &&
+        offset == partition->start);
+
+    grub_millisleep(5000);
+
+    if (partition->number != 3 ||
+        partition->len != 494467072 ||
+        offset != partition->start)
+    {
+        grub_printf("ERROR: Disk partition layout check failed.\n");
+
+        grub_file_close(file);
+        return ventoy_set_check_result(
+            7, "Disk partition layout check failed.");
+    }
+}
+
+grub_file_close(file);
 
     if (workaround == 0)
 	{
