@@ -791,8 +791,7 @@ else
     if (!dev2)
     {
         grub_printf("ERROR: Failed to open partition 3\n");
-		grub_millisleep(5000);
-
+        grub_millisleep(5000);
         grub_file_close(file);
 
         return ventoy_set_check_result(
@@ -810,7 +809,7 @@ else
 
     grub_printf(
         "P3 number check: %s\n",
-        (partition->number == 3) ? "PASS" : "FAIL"
+        (partition->number == 2) ? "PASS" : "FAIL"
     );
 
     grub_printf(
@@ -818,18 +817,18 @@ else
         (partition->len == 4294960) ? "PASS" : "FAIL"
     );
 
-    if (partition->number != 3 ||
+    if (partition->number != 2 ||
         partition->len != 4294960)
     {
         grub_device_close(dev2);
         grub_file_close(file);
-		grub_millisleep(5000);
+        grub_millisleep(5000);
 
         return ventoy_set_check_result(
             7, "Ventoy partition layout check failed.");
     }
 
-    /* Calculate the end of partition 3 */
+    /* Calculate the first sector after partition 3 */
     offset = partition->start + partition->len;
 
     grub_printf(
@@ -854,9 +853,8 @@ else
     if (!dev2)
     {
         grub_printf("ERROR: Failed to open partition 4\n");
-
         grub_file_close(file);
-		grub_millisleep(5000);
+        grub_millisleep(5000);
 
         return ventoy_set_check_result(
             7, "ISO partition open failed.");
@@ -873,7 +871,7 @@ else
 
     grub_printf(
         "P4 number check: %s\n",
-        (partition->number == 4) ? "PASS" : "FAIL"
+        (partition->number == 3) ? "PASS" : "FAIL"
     );
 
     grub_printf(
@@ -883,19 +881,19 @@ else
         (offset == partition->start) ? "PASS" : "FAIL"
     );
 
-    if (partition->number != 4 ||
+    if (partition->number != 3 ||
         offset != partition->start)
     {
         grub_device_close(dev2);
         grub_file_close(file);
-		grub_millisleep(5000);
+        grub_millisleep(5000);
 
         return ventoy_set_check_result(
             7, "Disk partition layout check failed.");
     }
 
     grub_printf("Normal partition layout result: PASS\n");
-	grub_millisleep(5000);
+    grub_millisleep(5000);
 
     grub_device_close(dev2);
 }
