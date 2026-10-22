@@ -705,13 +705,15 @@ static int ventoy_check_official_device(grub_device_t dev)
         {
             grub_printf("GPT layout result: FAIL\n");
 
-            grub_file_close(file);
+            grub_millisleep(5000);
+			grub_file_close(file);
 
             return ventoy_set_check_result(
                 6, "Disk partition layout check failed.");
         }
 
         grub_printf("GPT layout result: PASS\n");
+		grub_millisleep(5000);
     }
     else
     {
@@ -762,6 +764,7 @@ static int ventoy_check_official_device(grub_device_t dev)
             PartTbl[2].SectorCount != 4294960)
         {
             grub_printf("MBR layout result: FAIL\n");
+			grub_millisleep(5000);
 
             grub_file_close(file);
 
@@ -788,6 +791,7 @@ else
     if (!dev2)
     {
         grub_printf("ERROR: Failed to open partition 3\n");
+		grub_millisleep(5000);
 
         grub_file_close(file);
 
@@ -819,6 +823,7 @@ else
     {
         grub_device_close(dev2);
         grub_file_close(file);
+		grub_millisleep(5000);
 
         return ventoy_set_check_result(
             7, "Ventoy partition layout check failed.");
@@ -851,6 +856,7 @@ else
         grub_printf("ERROR: Failed to open partition 4\n");
 
         grub_file_close(file);
+		grub_millisleep(5000);
 
         return ventoy_set_check_result(
             7, "ISO partition open failed.");
@@ -882,12 +888,14 @@ else
     {
         grub_device_close(dev2);
         grub_file_close(file);
+		grub_millisleep(5000);
 
         return ventoy_set_check_result(
             7, "Disk partition layout check failed.");
     }
 
     grub_printf("Normal partition layout result: PASS\n");
+	grub_millisleep(5000);
 
     grub_device_close(dev2);
 }
