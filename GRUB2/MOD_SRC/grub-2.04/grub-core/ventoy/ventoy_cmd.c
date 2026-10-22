@@ -5176,8 +5176,6 @@ int ventoy_load_part_table(const char *diskname)
         }
     }
 
-    g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(0);
-    g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(1);
     g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
     g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
@@ -5252,8 +5250,6 @@ static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int arg
         ventoy_prompt_end();
     }
 
-    g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(0);
-    g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(1);
     g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(2);
     g_ventoy_disk_part_size[3] = ventoy_get_vtoy_partsize(3);
 
