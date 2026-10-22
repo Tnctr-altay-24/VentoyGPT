@@ -677,12 +677,24 @@ static int ventoy_check_official_device(grub_device_t dev)
 	else
 	{
     	offset = partition->start + partition->len;
-    	partition = file->device->disk->partition;
-    	if ((partition->number != 3) || (partition->len != 494467072) || (offset != partition->start))
+    	grub_snprintf(devname, sizeof(devname), "%s,4", dev->disk->name);
+    	dev2 = grub_device_open(devname);
+
+    	if (!dev2)
     	{
+        	grub_file_close(file);
+        	return ventoy_set_check_result(7, "ISO partition open failed.");
+    	}
+
+    	partition = dev2->disk->partition;
+    	if (partition->number != 3 || partition->len != 494467072 || offset != partition->start)
+    	{
+        	grub_device_close(dev2);
         	grub_file_close(file);
         	return ventoy_set_check_result(7, "Disk partition layout check failed.");
     	}
+
+    	grub_device_close(dev2);
    	}
 
    	grub_file_close(file);
