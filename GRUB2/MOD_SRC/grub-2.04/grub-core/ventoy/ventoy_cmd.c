@@ -5251,7 +5251,7 @@ static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int arg
     }
 
     g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(2);
-    g_ventoy_disk_part_size[2] = ventoy_get_vtoy_partsize(3);
+    g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(3);
 
     return 0;
 }
