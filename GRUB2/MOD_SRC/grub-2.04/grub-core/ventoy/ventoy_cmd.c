@@ -739,7 +739,6 @@ if (workaround)
 }
 else
 {
-    grub_uint64_t offset;
 
     /* VTOYEFI partition: expected GPT3 */
     partition = file->device->disk->partition;
