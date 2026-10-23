@@ -646,10 +646,40 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     partition = dev->disk->partition;
-    if (partition->number != 2 || partition->start != 478009040)
-    {
-        return ventoy_set_check_result(5, "Ventoy partition is not start at 1MB");
-    }
+
+/* DEBUG: Ventoy partition check */
+grub_printf("\n");
+grub_printf("========== Ventoy DEBUG ==========\n");
+grub_printf("Disk name       : %s\n", dev->disk->name);
+grub_printf("Partition number: %d\n", partition->number);
+grub_printf("Partition start : %llu\n",
+            (unsigned long long)partition->start);
+grub_printf("Partition length: %llu\n",
+            (unsigned long long)partition->len);
+grub_printf("Expected number : 2\n");
+grub_printf("Expected start  : 478009040\n");
+grub_printf("==================================\n");
+
+if (partition->number != 2 || partition->start != 478009040)
+{
+    grub_printf("DEBUG ERROR: ");
+
+    if (partition->number != 2)
+        grub_printf("partition number mismatch! ");
+
+    if (partition->start != 478009040)
+        grub_printf("partition start mismatch! ");
+
+    grub_printf("\n");
+    grub_printf("Waiting 5 seconds...\n");
+
+    grub_millisleep(5000);
+
+    return ventoy_set_check_result(
+        5,
+        "The start sector of the Ventoy partition is incorrect."
+    );
+}
 
     if (workaround)
     {
