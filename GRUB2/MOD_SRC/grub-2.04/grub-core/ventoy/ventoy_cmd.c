@@ -660,7 +660,7 @@ grub_printf("Expected number : 2\n");
 grub_printf("Expected start  : 478009040\n");
 grub_printf("==================================\n");
 
-if (partition->number != 3 || partition->start != 478009040)
+if (partition->number != 3 || partition->start != 482304000)
 {
     grub_printf("DEBUG ERROR: ");
 
