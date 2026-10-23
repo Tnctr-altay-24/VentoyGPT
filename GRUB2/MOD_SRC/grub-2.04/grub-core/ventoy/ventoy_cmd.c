@@ -667,12 +667,17 @@ grub_printf("Partition start  : %llu\n",
 grub_printf("Partition length : %llu\n",
     (unsigned long long)partition->len);
 
-grub_printf("Expected number  : 3\n");
-grub_printf("Expected start   : 478009040\n");
-grub_printf("Expected length  : 4294960\n");
+grub_printf("Number matches   : %s\n",
+    partition->number == 2 ? "YES (2)" :
+    partition->number == 3 ? "YES (3)" : "NO");
 
-grub_millisleep(5000);
+grub_printf("Start matches    : %s\n",
+    partition->start == 478009040 ? "YES" : "NO");
 
+grub_printf("Length matches   : %s\n",
+    partition->len == 4294960 ? "YES" : "NO");
+
+grub_millisleep(5000)
 if (partition->number != 3 ||
     partition->start != 478009040 ||
     partition->len != 4294960)
