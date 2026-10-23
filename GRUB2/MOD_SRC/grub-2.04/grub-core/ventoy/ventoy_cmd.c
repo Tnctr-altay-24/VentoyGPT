@@ -646,48 +646,18 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     partition = dev->disk->partition;
-
-/* DEBUG: Ventoy partition check */
-grub_printf("\n");
-grub_printf("========== Ventoy DEBUG ==========\n");
-grub_printf("Disk name       : %s\n", dev->disk->name);
-grub_printf("Partition number: %d\n", partition->number);
-grub_printf("Partition start : %llu\n",
-            (unsigned long long)partition->start);
-grub_printf("Partition length: %llu\n",
-            (unsigned long long)partition->len);
-grub_printf("Expected number : 2\n");
-grub_printf("Expected start  : 478009040\n");
-grub_printf("==================================\n");
-
-if (partition->number != 3 || partition->start != 482304000)
-{
-    grub_printf("DEBUG ERROR: ");
-
-    if (partition->number != 2)
-        grub_printf("partition number mismatch! ");
-
-    if (partition->start != 478009040)
-        grub_printf("partition start mismatch! ");
-
-    grub_printf("\n");
-    grub_printf("Waiting 5 seconds...\n");
-
-    grub_millisleep(5000);
-
-    return ventoy_set_check_result(
-        5,
-        "The start sector of the Ventoy partition is incorrect."
-    );
-}
+	if (partition->number != 3 || partition->start != 482304000)
+	{
+    	return ventoy_set_check_result(5, "The start sector of the Ventoy partition is incorrect."
+    )
 
     if (workaround)
     {
     	if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
     	{
         	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-        	if (PartTbl[2].StartLBA != 478009040 || (PartTbl[2].LastLBA - PartTbl[2].StartLBA + 1) != 4294960 ||
-            	PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1)
+        	if (PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1 ||
+              	(PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 4294960)
         	{
             	grub_file_close(file);
             	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -696,8 +666,8 @@ if (partition->number != 3 || partition->start != 482304000)
     	else
     	{
         	ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-        	if (PartTbl[2].StartSectorId != 478009040 || PartTbl[2].SectorCount != 4294960 ||
-            	PartTbl[3].StartSectorId != PartTbl[2].StartSectorId + PartTbl[2].SectorCount)
+        	if (PartTbl[3].StartSectorId != PartTbl[2].StartSectorId + PartTbl[2].SectorCount ||
+              	PartTbl[2].SectorCount != 4294960)
           	{
             	grub_file_close(file);
             	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -707,24 +677,12 @@ if (partition->number != 3 || partition->start != 482304000)
 	else
 	{
     	offset = partition->start + partition->len;
-    	grub_snprintf(devname, sizeof(devname), "%s,4", dev->disk->name);
-    	dev2 = grub_device_open(devname);
-
-    	if (!dev2)
-    	{
-        	grub_file_close(file);
-        	return ventoy_set_check_result(7, "ISO partition open failed.");
-    	}
-
-    	partition = dev2->disk->partition;
-    	if (partition->number != 3 || partition->len != 494467072 || offset != partition->start)
-    	{
-        	grub_device_close(dev2);
-        	grub_file_close(file);
-        	return ventoy_set_check_result(7, "Disk partition layout check failed.");
-    	}
-
-    	grub_device_close(dev2);
+      	partition = file->device->disk->partition;
+      	if ((partition->number != 2) || (partition->len != 4294960) || (offset != partition->start))
+      	{
+          	grub_file_close(file);
+          	return ventoy_set_check_result(7, "Disk partition layout check failed.");
+      	}
 	}
 
 	grub_file_close(file);
@@ -5192,7 +5150,7 @@ int ventoy_load_part_table(const char *diskname)
     grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
     grub_disk_close(disk);
 
-    grub_snprintf(name, sizeof(name), "%s,gpt4", diskname);
+    grub_snprintf(name, sizeof(name), "%s,gpt3", diskname);
     dev = grub_device_open(name);
     if (dev)
     {
