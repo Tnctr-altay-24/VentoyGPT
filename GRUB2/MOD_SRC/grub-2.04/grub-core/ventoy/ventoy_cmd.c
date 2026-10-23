@@ -645,39 +645,55 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-    partition = dev->disk->partition;
+    partition = file->device->disk->partition;
 
-grub_printf("\n=== PARTITION DEBUG A ===\n");
-grub_printf("dev disk      : %s\n", dev->disk->name);
-grub_printf("number        : %d\n", partition->number);
-grub_printf("start         : %llu\n",
+grub_printf("\n==== VTOYEFI PARTITION DEBUG ====\n");
+
+if (partition == NULL)
+{
+    grub_printf("ERROR: file partition is NULL\n");
+    grub_millisleep(5000);
+    grub_file_close(file);
+
+    return ventoy_set_check_result(
+        5,
+        "VTOYEFI partition information is missing."
+    );
+}
+
+grub_printf("Partition number : %d\n", partition->number);
+grub_printf("Partition start  : %llu\n",
     (unsigned long long)partition->start);
-grub_printf("length        : %llu\n",
+grub_printf("Partition length : %llu\n",
     (unsigned long long)partition->len);
 
-grub_printf("=== PARTITION DEBUG B ===\n");
-grub_printf("file partition: %d\n",
-    file->device->disk->partition ?
-    file->device->disk->partition->number : -1);
-
-grub_printf("file start    : %llu\n",
-    (unsigned long long)(
-        file->device->disk->partition ?
-        file->device->disk->partition->start : 0));
+grub_printf("Expected number  : 3\n");
+grub_printf("Expected start   : 478009040\n");
+grub_printf("Expected length  : 4294960\n");
 
 grub_millisleep(5000);
-	if (partition->number != 3 || partition->start != 482304000)
-	{
-    	return ventoy_set_check_result(5, "The start sector of the Ventoy partition is incorrect.");
-	}
+
+if (partition->number != 3 ||
+    partition->start != 478009040 ||
+    partition->len != 4294960)
+{
+    grub_printf("DEBUG ERROR: VTOYEFI partition mismatch\n");
+    grub_millisleep(5000);
+    grub_file_close(file);
+
+    return ventoy_set_check_result(
+        5,
+        "VTOYEFI partition layout is incorrect."
+    );
+}
 
     if (workaround)
     {
     	if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
     	{
         	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-        	if (PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1 ||
-              	(PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 4294960)
+        	if (PartTbl[2].StartLBA != 478009040 || (PartTbl[2].LastLBA - PartTbl[2].StartLBA + 1) != 4294960 ||
+    			PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1)
         	{
             	grub_file_close(file);
             	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -686,8 +702,8 @@ grub_millisleep(5000);
     	else
     	{
         	ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-        	if (PartTbl[3].StartSectorId != PartTbl[2].StartSectorId + PartTbl[2].SectorCount ||
-              	PartTbl[2].SectorCount != 4294960)
+        	if (PartTbl[2].StartSectorId != 478009040 || PartTbl[2].SectorCount != 4294960 ||
+				PartTbl[3].StartSectorId != PartTbl[2].StartSectorId + PartTbl[2].SectorCount)
           	{
             	grub_file_close(file);
             	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -695,16 +711,41 @@ grub_millisleep(5000);
    	 	}
 	}
 	else
-	{
-    	offset = partition->start + partition->len;
-      	partition = file->device->disk->partition;
-      	if ((partition->number != 3) || (partition->len != 494467072) || (offset != partition->start))
-      	{
-          	grub_file_close(file);
-          	return ventoy_set_check_result(7, "Disk partition layout check failed.");
-      	}
-	}
+{
+    /* VTOYEFI partition: GPT3 */
+    partition = file->device->disk->partition;
 
+    if (partition == NULL ||
+        partition->number != 3 ||
+        partition->start != 478009040 ||
+        partition->len != 4294960)
+    {
+        grub_file_close(file);
+        return ventoy_set_check_result(
+            7,
+            "VTOYEFI partition layout check failed."
+        );
+    }
+
+    /* Expected end of VTOYEFI */
+    offset = partition->start + partition->len;
+
+    /* ISO partition: GPT4 */
+    partition = dev->disk->partition;
+
+    if (partition == NULL ||
+        partition->number != 4 ||
+        partition->start != offset ||
+        partition->start != 482304000 ||
+        partition->len != 494467072)
+    {
+        grub_file_close(file);
+        return ventoy_set_check_result(
+            7,
+            "ISO partition layout check failed."
+        );
+    }
+}
 	grub_file_close(file);
 
     if (workaround == 0)
