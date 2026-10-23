@@ -677,7 +677,8 @@ grub_printf("Start matches    : %s\n",
 grub_printf("Length matches   : %s\n",
     partition->len == 4294960 ? "YES" : "NO");
 
-grub_millisleep(5000)
+grub_millisleep(5000);
+
 if (partition->number != 3 ||
     partition->start != 478009040 ||
     partition->len != 4294960)
@@ -692,32 +693,55 @@ if (partition->number != 3 ||
     );
 }
 
-    if (workaround)
-    {
-    	if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
-    	{
-        	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-        	if (PartTbl[2].StartLBA != 478009040 || (PartTbl[2].LastLBA - PartTbl[2].StartLBA + 1) != 4294960 ||
-    			PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1)
-        	{
-            	grub_file_close(file);
-            	return ventoy_set_check_result(6, "Disk partition layout check failed.");
-        	}
-    	}
-    	else
-    	{
-        	ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-        	if (PartTbl[2].StartSectorId != 478009040 || PartTbl[2].SectorCount != 4294960 ||
-				PartTbl[3].StartSectorId != PartTbl[2].StartSectorId + PartTbl[2].SectorCount)
-          	{
-            	grub_file_close(file);
-            	return ventoy_set_check_result(6, "Disk partition layout check failed.");
-        	}
-   	 	}
-	}
-	else
+if (workaround)
 {
-    /* VTOYEFI partition: GPT3 */
+    if (grub_strncmp(
+            g_ventoy_part_info->Head.Signature,
+            "EFI PART", 8) == 0)
+    {
+        ventoy_gpt_part_tbl *PartTbl =
+            g_ventoy_part_info->PartTbl;
+
+        if (PartTbl[2].StartLBA != 478009040 ||
+            (PartTbl[2].LastLBA -
+             PartTbl[2].StartLBA + 1) != 4294960 ||
+            PartTbl[3].StartLBA !=
+                PartTbl[2].LastLBA + 1 ||
+            PartTbl[3].LastLBA -
+                PartTbl[3].StartLBA + 1 != 494467072)
+        {
+            grub_file_close(file);
+            return ventoy_set_check_result(
+                6,
+                "Disk partition layout check failed."
+            );
+        }
+    }
+    else
+    {
+        ventoy_part_table *PartTbl =
+            g_ventoy_part_info->MBR.PartTbl;
+
+        if (PartTbl[2].StartSectorId != 478009040 ||
+            PartTbl[2].SectorCount != 4294960 ||
+            PartTbl[3].StartSectorId !=
+                PartTbl[2].StartSectorId +
+                PartTbl[2].SectorCount ||
+            PartTbl[3].SectorCount != 494467072)
+        {
+            grub_file_close(file);
+            return ventoy_set_check_result(
+                6,
+                "Disk partition layout check failed."
+            );
+        }
+    }
+}
+else
+{
+    grub_uint64_t offset;
+
+    /* VTOYEFI partition: expected GPT3 */
     partition = file->device->disk->partition;
 
     if (partition == NULL ||
@@ -732,10 +756,10 @@ if (partition->number != 3 ||
         );
     }
 
-    /* Expected end of VTOYEFI */
+    /* Expected start of ISO partition */
     offset = partition->start + partition->len;
 
-    /* ISO partition: GPT4 */
+    /* ISO partition: expected GPT4 */
     partition = dev->disk->partition;
 
     if (partition == NULL ||
