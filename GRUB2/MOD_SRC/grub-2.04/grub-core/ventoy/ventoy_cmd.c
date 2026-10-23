@@ -679,7 +679,7 @@ grub_printf("Length matches   : %s\n",
 
 grub_millisleep(5000);
 
-if (partition->number != 3 ||
+if (partition->number != 2 ||
     partition->start != 478009040 ||
     partition->len != 4294960)
 {
