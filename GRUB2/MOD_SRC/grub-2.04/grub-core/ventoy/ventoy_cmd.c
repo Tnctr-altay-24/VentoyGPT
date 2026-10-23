@@ -646,6 +646,26 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     partition = dev->disk->partition;
+
+grub_printf("\n=== PARTITION DEBUG A ===\n");
+grub_printf("dev disk      : %s\n", dev->disk->name);
+grub_printf("number        : %d\n", partition->number);
+grub_printf("start         : %llu\n",
+    (unsigned long long)partition->start);
+grub_printf("length        : %llu\n",
+    (unsigned long long)partition->len);
+
+grub_printf("=== PARTITION DEBUG B ===\n");
+grub_printf("file partition: %d\n",
+    file->device->disk->partition ?
+    file->device->disk->partition->number : -1);
+
+grub_printf("file start    : %llu\n",
+    (unsigned long long)(
+        file->device->disk->partition ?
+        file->device->disk->partition->start : 0));
+
+grub_millisleep(5000);
 	if (partition->number != 3 || partition->start != 482304000)
 	{
     	return ventoy_set_check_result(5, "The start sector of the Ventoy partition is incorrect.");
