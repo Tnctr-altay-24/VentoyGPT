@@ -648,8 +648,8 @@ static int ventoy_check_official_device(grub_device_t dev)
     partition = dev->disk->partition;
 	if (partition->number != 3 || partition->start != 482304000)
 	{
-    	return ventoy_set_check_result(5, "The start sector of the Ventoy partition is incorrect."
-    )
+    	return ventoy_set_check_result(5, "The start sector of the Ventoy partition is incorrect.");
+	}
 
     if (workaround)
     {
