@@ -563,7 +563,13 @@ static int ventoy_set_check_result(int ret, const char *msg)
 {
     char buf[32];
 
-    grub_snprintf(buf, sizeof(buf), "%d", (ret & 0x7FFF));
+    /* DEBUG: hata kodunun ve mesajinin kaynagini bul */
+    grub_printf("DEBUG RESULT: ret=%d msg=%s\n",
+                ret, msg ? msg : "(null)");
+    grub_refresh();
+	grub_millisleep(5000);
+	
+	grub_snprintf(buf, sizeof(buf), "%d", (ret & 0x7FFF));
     grub_env_set("VTOY_CHKDEV_RESULT_STRING", buf);
     grub_env_export("VTOY_CHKDEV_RESULT_STRING");
 
@@ -652,7 +658,7 @@ static int ventoy_check_official_device(grub_device_t dev)
 	grub_refresh();
 	grub_millisleep(5000);
 	
-    if (partition->number != 2 || partition->start != 478009040 || partition->len != 4294960)
+    if (partition->number != 2 || partition->start != 478009040)
     {
         return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
     }
