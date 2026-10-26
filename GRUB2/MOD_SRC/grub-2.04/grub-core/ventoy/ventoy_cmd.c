@@ -563,13 +563,7 @@ static int ventoy_set_check_result(int ret, const char *msg)
 {
     char buf[32];
 
-    /* DEBUG: hata kodunun ve mesajinin kaynagini bul */
-    grub_printf("DEBUG RESULT: ret=%d msg=%s\n",
-                ret, msg ? msg : "(null)");
-    grub_refresh();
-	grub_millisleep(5000);
-	
-	grub_snprintf(buf, sizeof(buf), "%d", (ret & 0x7FFF));
+    grub_snprintf(buf, sizeof(buf), "%d", (ret & 0x7FFF));
     grub_env_set("VTOY_CHKDEV_RESULT_STRING", buf);
     grub_env_export("VTOY_CHKDEV_RESULT_STRING");
 
@@ -651,14 +645,8 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-	partition = dev->disk->partition;
-	grub_printf("DEBUG: partition number=%d start=%llu len=%llu\n",
-    partition->number, (unsigned long long)partition->start, (unsigned long long)partition->len);
-
-	grub_refresh();
-	grub_millisleep(5000);
-	
-    if (partition->number != 2 || partition->start != 478009040)
+    partition = dev->disk->partition;
+    if (partition->number != 2 || partition->start != 1312768)
     {
         return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
     }
@@ -669,7 +657,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     	{
         	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
         	if (PartTbl[3].StartLBA != PartTbl[2].LastLBA + 1 ||
-        		(PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 4294960)
+            	(PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 2097152)
         	{
             	grub_file_close(file);
             	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -679,7 +667,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     	{
         	ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
         	if (PartTbl[3].StartSectorId != PartTbl[2].StartSectorId + PartTbl[2].SectorCount ||
-        		PartTbl[2].SectorCount != 4294960)
+            	PartTbl[2].SectorCount != 2097152)
         	{
             	grub_file_close(file);
             	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -689,12 +677,24 @@ static int ventoy_check_official_device(grub_device_t dev)
 	else
 	{
     	offset = partition->start + partition->len;
-    	partition = file->device->disk->partition;
-    	if (partition->number != 2 || partition->start + partition->len != offset)
+    	grub_snprintf(devname, sizeof(devname), "%s,4", dev->disk->name);
+    	dev2 = grub_device_open(devname);
+
+    	if (!dev2)
     	{
         	grub_file_close(file);
-            return ventoy_set_check_result(7, "Disk partition layout check failed.");
+        	return ventoy_set_check_result(7, "ISO partition open failed.");
     	}
+
+    	partition = dev2->disk->partition;
+    	if (partition->number != 3 || partition->len != 4978655 || offset != partition->start)
+    	{
+        	grub_device_close(dev2);
+        	grub_file_close(file);
+        	return ventoy_set_check_result(7, "Disk partition layout check failed.");
+    	}
+
+    	grub_device_close(dev2);
 	}
 
 	grub_file_close(file);
@@ -2918,7 +2918,7 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         return grub_error(GRUB_ERR_BAD_ARGUMENT, "Must clear image before list");
     }
 
-    VTOY_CMD_CHECK(1);
+    VTOY_CMD_CHECK(0);
 
     g_enumerate_time_checked = 0;
     g_enumerate_start_time_ms = grub_get_time_ms();
@@ -4392,9 +4392,9 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, 
         return 0;
     }
 
-   	VTOY_CMD_CHECK(1);
+   	VTOY_CMD_CHECK(0);
 
-	if (args[0][0] == '0')
+    if (args[0][0] == '0')
     {
         if (args[1][0] == '0')
         {
