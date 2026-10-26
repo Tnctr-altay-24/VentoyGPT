@@ -652,9 +652,9 @@ static int ventoy_check_official_device(grub_device_t dev)
 	grub_refresh();
 	grub_millisleep(5000);
 	
-    if (partition->number != 3 || partition->start != 482304000)
+    if (partition->number != 2 || partition->start != 478009040 || partition->len != 4294960)
     {
-        return ventoy_set_check_result(5, "Ventoy partition is not start at 1MB");
+        return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
     }
 
     if (workaround)
