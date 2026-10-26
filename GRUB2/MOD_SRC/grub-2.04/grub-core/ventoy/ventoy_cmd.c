@@ -646,7 +646,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
 	partition = dev->disk->partition;
-    if (partition->number != 2 || partition->start != 478009040)
+    if (partition->number != 3 || partition->start != 482304000)
     {
         return ventoy_set_check_result(5, "Ventoy partition is not start at 1MB");
     }
