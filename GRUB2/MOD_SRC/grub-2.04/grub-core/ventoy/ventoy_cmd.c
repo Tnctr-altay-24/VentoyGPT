@@ -646,20 +646,8 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     partition = dev->disk->partition;
-    grub_printf("DEBUG: partition number=%d start=%llu len=%llu\n",
-    partition->number, (unsigned long long)partition->start, (unsigned long long)partition->len);
-
-    grub_refresh();
-    grub_millisleep(5000);
-
     if (partition->number != 2 || partition->start != 1312768)
     {
-        grub_printf("DEBUG: partition number=%d start=%llu len=%llu\n",
-        partition->number, (unsigned long long)partition->start, (unsigned long long)partition->len);
-
-        grub_refresh();
-        grub_millisleep(5000);
-
         return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
     }
 
@@ -692,7 +680,13 @@ static int ventoy_check_official_device(grub_device_t dev)
     	partition = file->device->disk->partition;
     	if (partition->number != 3 || partition->len != 2097152 || offset != partition->start)
     	{
-            grub_file_close(file);
+            grub_printf("DEBUG: partition number=%d partition->len=%llu offset=%llu partition->start=%llu\n",
+    		partition->number, (unsigned long long)partition->start, (unsigned long long)partition->len);
+
+    		grub_refresh();
+    		grub_millisleep(5000);
+
+			grub_file_close(file);
             return ventoy_set_check_result(7, "Disk partition layout check failed.");
       }
   }
