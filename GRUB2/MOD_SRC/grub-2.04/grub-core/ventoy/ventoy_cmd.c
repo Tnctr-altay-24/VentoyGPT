@@ -652,7 +652,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     grub_refresh();
     grub_millisleep(5000);
 
-    if (partition->number != 0 || partition->start != 2048)
+    if (partition->number != 2 || partition->start != 1312760)
     {
         grub_printf("DEBUG: partition number=%d start=%llu len=%llu\n",
         partition->number, (unsigned long long)partition->start, (unsigned long long)partition->len);
