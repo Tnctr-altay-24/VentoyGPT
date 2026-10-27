@@ -692,19 +692,12 @@ static int ventoy_check_official_device(grub_device_t dev)
 }
 	else
 {
-    grub_printf(
-        "BEFORE: number=%d start=%llu len=%llu\n",
-        partition->number,
-        (unsigned long long)partition->start,
-        (unsigned long long)partition->len
-    );
-
     offset = partition->start + partition->len;
 
     partition = file->device->disk->partition;
 
     grub_printf(
-        "AFTER: number=%d start=%llu len=%llu offset=%llu\n",
+        "DEBUG: number=%d start=%llu len=%llu offset=%llu\n",
         partition->number,
         (unsigned long long)partition->start,
         (unsigned long long)partition->len,
@@ -714,9 +707,9 @@ static int ventoy_check_official_device(grub_device_t dev)
     grub_refresh();
     grub_millisleep(5000);
 
-    if (partition->number != 3 ||
+    if (partition->number != 2 ||
         partition->len != 2097152 ||
-        offset != partition->start)
+        offset != 3409920)
     {
         grub_file_close(file);
         return ventoy_set_check_result(
