@@ -988,13 +988,13 @@ UINT64 GetVentoyEfiPartStartSector(HANDLE hDrive)
             return 0;
         }
 
-        StartSector = pGpt->PartTbl[2].StartLBA;
+        StartSector = pGpt->PartTbl[3].StartLBA;
         free(pGpt);
     }
     else
     {
         Log("MBR partition style");
-        StartSector = MBR.PartTbl[1].StartSectorId;
+        StartSector = MBR.PartTbl[3].StartSectorId;
     }
 
     Log("GetVentoyEfiPart StartSector: %llu", StartSector);
