@@ -695,15 +695,64 @@ grub_millisleep(5000);
       	}
   	}
 	else
-  	{
-      	offset = partition->start + partition->len;
-      	partition = file->device->disk->partition;
-      	if ((partition->number != 2) || (partition->len != 2097152) || (offset != partition->start))
-      	{
-          	grub_file_close(file);
-          	return ventoy_set_check_result(7, "Disk partition layout check failed.");
-      	}
-  	}
+{
+    grub_printf("\n==== ERROR 7 DEBUG ====\n");
+
+    grub_printf("FIRST PARTITION:\n");
+    grub_printf("Start : %llu\n",
+        (unsigned long long)partition->start);
+    grub_printf("Length: %llu\n",
+        (unsigned long long)partition->len);
+    grub_printf("Number: %d\n", partition->number);
+
+    offset = partition->start + partition->len;
+
+    grub_printf("\nExpected next partition start: %llu\n",
+        (unsigned long long)offset);
+
+    partition = file->device->disk->partition;
+
+    if (partition == NULL)
+    {
+        grub_printf("SECOND PARTITION IS NULL!\n");
+        grub_millisleep(10000);
+
+        grub_file_close(file);
+        return ventoy_set_check_result(7,
+            "Second partition is NULL.");
+    }
+
+    grub_printf("\nSECOND PARTITION:\n");
+    grub_printf("Start : %llu\n",
+        (unsigned long long)partition->start);
+    grub_printf("Length: %llu\n",
+        (unsigned long long)partition->len);
+    grub_printf("Number: %d\n", partition->number);
+
+    grub_printf("\nCHECK RESULTS:\n");
+
+    grub_printf("Number check: %s\n",
+        partition->number == 2 ? "PASS" : "FAIL");
+
+    grub_printf("Length check: %s\n",
+        partition->len == 2097152 ? "PASS" : "FAIL");
+
+    grub_printf("Offset check: %s\n",
+        offset == partition->start ? "PASS" : "FAIL");
+
+    grub_printf("========================\n");
+
+    grub_millisleep(10000);
+
+    if ((partition->number != 2) ||
+        (partition->len != 2097152) ||
+        (offset != partition->start))
+    {
+        grub_file_close(file);
+        return ventoy_set_check_result(7,
+            "Disk partition layout check failed.");
+    }
+}
 
 	grub_file_close(file);
 
