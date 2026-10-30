@@ -676,18 +676,18 @@ grub_millisleep(5000);
     	if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
     	{
         	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-          if (PartTbl[2].StartLBA != PartTbl[1].LastLBA + 1 ||
-              (PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 2097152)
-          {
-              grub_file_close(file);
-              return ventoy_set_check_result(6, "Disk partition layout check failed.");
-          }
+          	if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
+    			(PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 1048576)
+          	{
+              	grub_file_close(file);
+              	return ventoy_set_check_result(6, "Disk partition layout check failed.");
+          	}
       	}
       	else
       	{
           	ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-          	if (PartTbl[2].StartSectorId != PartTbl[1].StartSectorId + PartTbl[1].SectorCount ||
-              	PartTbl[2].SectorCount != 2097152)
+          	if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
+              	PartTbl[1].SectorCount != 1048576)
           	{
               	grub_file_close(file);
               	return ventoy_set_check_result(6, "Disk partition layout check failed.");
