@@ -1,6 +1,58 @@
+/******************************************************************************
+ * ventoy_cmd.c
+ *
+ * Copyright (c) 2021, longpanda <admin@ventoy.net>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#include <grub/types.h>
+#include <grub/misc.h>
+#include <grub/mm.h>
+#include <grub/err.h>
+#include <grub/dl.h>
+#include <grub/disk.h>
+#include <grub/device.h>
+#include <grub/term.h>
+#include <grub/partition.h>
+#include <grub/file.h>
+#include <grub/normal.h>
+#include <grub/extcmd.h>
+#include <grub/datetime.h>
+#include <grub/i18n.h>
+#include <grub/net.h>
+#include <grub/misc.h>
+#include <grub/kernel.h>
+#ifdef GRUB_MACHINE_EFI
+#include <grub/efi/api.h>
+#include <grub/efi/efi.h>
+#endif
+#include <grub/time.h>
+#include <grub/video.h>
+#include <grub/acpi.h>
+#include <grub/charset.h>
+#include <grub/crypto.h>
+#include <grub/lib/crc.h>
+#include <grub/random.h>
+#include <grub/ventoy.h>
+#include "ventoy_def.h"
+#include "miniz.h"
+
 GRUB_MOD_LICENSE ("GPLv3+");
 
-static grub_uint8_t g_check_mbr_data[512] = {
+static grub_uint8_t g_check_mbr_data[] = {
     0x33, 0xC0, 0x8E, 0xD0, 0xBC, 0x00, 0x7C, 0x8E, 0xC0, 0x8E, 0xD8, 0xBE, 0x00, 0x7C, 0xBF, 0x00,
     0x06, 0xB9, 0x00, 0x02, 0xFC, 0xF3, 0xA4, 0x50, 0x68, 0x1C, 0x06, 0xCB, 0xFB, 0xB9, 0x04, 0x00,
     0xBD, 0xBE, 0x07, 0x80, 0x7E, 0x00, 0x00, 0x7C, 0x0B, 0x0F, 0x85, 0x0E, 0x01, 0x83, 0xC5, 0x10,
