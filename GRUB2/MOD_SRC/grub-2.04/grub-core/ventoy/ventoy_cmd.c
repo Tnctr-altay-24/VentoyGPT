@@ -701,59 +701,55 @@ grub_millisleep(5000);
           	}
       	}
   	}
-	else
+	
+else
 {
     grub_printf("\n==== ERROR 7 DEBUG ====\n");
 
     grub_printf("FIRST PARTITION:\n");
     grub_printf("Start : %llu\n",
-        (unsigned long long)partition->start);
+        (unsigned long long)
+        grub_partition_get_start(partition));
+
     grub_printf("Length: %llu\n",
         (unsigned long long)partition->len);
+
     grub_printf("Number: %d\n", partition->number);
 
-    offset = partition->start + partition->len;
+    offset = grub_partition_get_start(partition)
+             + partition->len;
 
     grub_printf("\nExpected next partition start: %llu\n",
         (unsigned long long)offset);
 
     partition = file->device->disk->partition;
 
-    if (partition == NULL)
-    {
-        grub_printf("SECOND PARTITION IS NULL!\n");
-        grub_millisleep(10000);
+    grub_printf("\n==== PARTITION COMPARISON ====\n");
 
-        grub_file_close(file);
-        return ventoy_set_check_result(7,
-            "Second partition is NULL.");
-    }
+    grub_printf("DEV DISK: %s\n", dev->disk->name);
 
-    grub_printf("\nSECOND PARTITION:\n");
-    grub_printf("Start : %llu\n",
-        (unsigned long long)partition->start);
-    grub_printf("Length: %llu\n",
+    grub_printf("DEV START: %llu\n",
+        (unsigned long long)
+        grub_partition_get_start(dev->disk->partition));
+
+    grub_printf("FILE DISK: %s\n",
+        file->device->disk->name);
+
+    grub_printf("FILE START: %llu\n",
+        (unsigned long long)
+        grub_partition_get_start(partition));
+
+    grub_printf("FILE LENGTH: %llu\n",
         (unsigned long long)partition->len);
-    grub_printf("Number: %d\n", partition->number);
 
-    grub_printf("\nCHECK RESULTS:\n");
+    grub_printf("==============================\n");
 
-    grub_printf("Number check: %s\n",
-        partition->number == 2 ? "PASS" : "FAIL");
+    grub_millisleep(5000);
 
-    grub_printf("Length check: %s\n",
-        partition->len == 2097152 ? "PASS" : "FAIL");
-
-    grub_printf("Offset check: %s\n",
-        offset == partition->start ? "PASS" : "FAIL");
-
-    grub_printf("========================\n");
-
-    grub_millisleep(10000);
-
-    if ((partition->number != 2) ||
-        (partition->len != 2097152) ||
-        (offset != partition->start))
+    if (partition == NULL ||
+        partition->number != 2 ||
+        partition->len != 2097152 ||
+        offset != grub_partition_get_start(partition))
     {
         grub_file_close(file);
         return ventoy_set_check_result(7,
