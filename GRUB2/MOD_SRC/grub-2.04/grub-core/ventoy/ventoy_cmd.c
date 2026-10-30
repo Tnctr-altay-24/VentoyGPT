@@ -5251,6 +5251,7 @@ end:
     return rc;
 }
 
+
 int ventoy_load_part_table(const char *diskname)
 {
     char name[64];
@@ -5264,32 +5265,60 @@ int ventoy_load_part_table(const char *diskname)
         return 1;
     }
 
+    /* Open disk */
     disk = grub_disk_open(diskname);
+
     if (!disk)
     {
         debug("Failed to open disk %s\n", diskname);
         return 1;
     }
 
-    g_ventoy_disk_size = disk->total_sectors * (1U << disk->log_sector_size);
+    /* DISK DEBUG */
+    grub_printf("\n==== DISK DEBUG ====\n");
+
+    grub_printf("DISKNAME: %s\n", diskname);
+    grub_printf("DISK ID: %d\n", disk->id);
+
+    g_ventoy_disk_size =
+        disk->total_sectors * (1U << disk->log_sector_size);
+
+    grub_printf("DISK SIZE: %llu\n",
+        (unsigned long long)g_ventoy_disk_size);
+
+    grub_millisleep(5000);
 
     g_ventoy_disk_bios_id = disk->id;
 
-    grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
+    /* Read partition table */
+    grub_disk_read(disk, 0, 0,
+        sizeof(ventoy_gpt_info), g_ventoy_part_info);
+
     grub_disk_close(disk);
 
-    grub_snprintf(name, sizeof(name), "%s,gpt3", diskname);
+    /* Open target VTOYEFI partition: (hd1,gpt3) */
+    grub_snprintf(name, sizeof(name), "hd1,gpt3");
+
+    grub_printf("TARGET DEVICE: (%s)\n", name);
+
     dev = grub_device_open(name);
+
     if (dev)
     {
         /* Check for official Ventoy device */
         ret = ventoy_check_official_device(dev);
+
         grub_device_close(dev);
 
         if (ret)
         {
             return 1;
         }
+    }
+    else
+    {
+        grub_printf("Failed to open target device: (%s)\n", name);
+        return 1;
     }
 
     g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(1);
