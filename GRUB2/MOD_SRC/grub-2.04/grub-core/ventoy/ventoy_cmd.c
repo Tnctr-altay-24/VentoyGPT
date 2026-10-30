@@ -593,45 +593,31 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-    grub_printf("\n==== FILE PARTITION DEBUG ====\n");
+    grub_printf("\n==== PARTITION 2 DEBUG ====\n");
 
-    partition = file->device->disk->partition;
+partition = dev->disk->partition;
 
-    if (partition != NULL)
-    {
-        grub_printf("File number : %d\n", partition->number);
-        grub_printf("File start  : %llu\n",
-            (unsigned long long)partition->start);
-        grub_printf("File length : %llu\n",
-            (unsigned long long)partition->len);
-    }
-    else
-    {
-        grub_printf("File partition is NULL\n");
-    }
+if (partition != NULL)
+{
+    grub_printf("Partition number : %d\n", partition->number);
+    grub_printf("Partition start  : %llu\n",
+        (unsigned long long)partition->start);
+    grub_printf("Partition length : %llu\n",
+        (unsigned long long)partition->len);
 
-    grub_printf("\n==== DEV PARTITION DEBUG ====\n");
+    grub_printf("Expected start   : 1312768\n");
+    grub_printf("Start match      : %s\n",
+        partition->start == 1312768 ? "YES" : "NO");
 
-    partition = dev->disk->partition;
+    grub_printf("Number match     : %s\n",
+        partition->number == 2 ? "YES" : "NO");
+}
+else
+{
+    grub_printf("Partition 2 is NULL!\n");
+}
 
-    if (partition != NULL)
-    {
-        grub_printf("Dev number : %d\n", partition->number);
-        grub_printf("Dev start  : %llu\n",
-            (unsigned long long)partition->start);
-        grub_printf("Dev length : %llu\n",
-            (unsigned long long)partition->len);
-    }
-    else
-    {
-        grub_printf("Dev partition is NULL\n");
-    }
-
-    grub_millisleep(5000);
-            
-    {
-        return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
-    }
+grub_millisleep(5000);
 
     if (workaround)
     {
