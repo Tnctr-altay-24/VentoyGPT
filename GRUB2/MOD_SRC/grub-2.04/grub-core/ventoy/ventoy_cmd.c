@@ -645,28 +645,35 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-    grub_printf("\n==== PARTITION 2 DEBUG ====\n");
+    /* DEVICE SOURCE DEBUG */
+
+grub_printf("\n==== DEVICE SOURCE DEBUG ====\n");
+
+grub_printf("DEV DISK NAME: %s\n", dev->disk->name);
 
 partition = dev->disk->partition;
 
-if (partition != NULL)
+if (partition)
 {
-    grub_printf("Partition number : %d\n", partition->number);
-    grub_printf("Partition start  : %llu\n",
+    grub_printf("DEV PART NUMBER : %d\n", partition->number);
+
+    grub_printf("DEV PART INDEX  : %d\n", partition->index);
+
+    grub_printf("DEV PART START  : %llu\n",
         (unsigned long long)partition->start);
-    grub_printf("Partition length : %llu\n",
+
+    grub_printf("DEV PART LENGTH : %llu\n",
         (unsigned long long)partition->len);
 
-    grub_printf("Expected start   : 1312768\n");
-    grub_printf("Start match      : %s\n",
-        partition->start == 1312768 ? "YES" : "NO");
+    grub_printf("DEV PART OFFSET : %llu\n",
+        (unsigned long long)partition->offset);
 
-    grub_printf("Number match     : %s\n",
-        partition->number == 2 ? "YES" : "NO");
-}
-else
-{
-    grub_printf("Partition 2 is NULL!\n");
+    grub_printf("DEV PART PARENT : %s\n",
+        partition->parent ? "YES" : "NO");
+
+    grub_printf("ABSOLUTE START  : %llu\n",
+        (unsigned long long)
+        grub_partition_get_start(partition));
 }
 
 grub_millisleep(5000);
