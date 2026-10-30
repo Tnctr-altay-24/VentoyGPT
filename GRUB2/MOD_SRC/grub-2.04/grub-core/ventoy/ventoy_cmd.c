@@ -646,60 +646,44 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     
-/* DEVICE SOURCE DEBUG */
-
-grub_printf("\n==== DEVICE SOURCE DEBUG ====\n");
-
-if (dev == NULL || dev->disk == NULL)
-{
-    grub_printf("DEV OR DISK IS NULL!\n");
-    grub_file_close(file);
-    return ventoy_set_check_result(7,
-        "Device disk is NULL.");
-}
-
-grub_printf("DEV DISK NAME: %s\n", dev->disk->name);
-
 partition = dev->disk->partition;
 
 if (partition == NULL)
 {
-    grub_printf("DEV PARTITION IS NULL!\n");
     grub_file_close(file);
-    return ventoy_set_check_result(7,
-        "Device partition is NULL.");
+    return ventoy_set_check_result(5,
+        "Ventoy partition is NULL.");
 }
 
-grub_printf("DEV PART NUMBER : %d\n", partition->number);
-grub_printf("DEV PART INDEX  : %d\n", partition->index);
+grub_printf("\n==== DEVICE SOURCE DEBUG ====\n");
 
-grub_printf("DEV PART START  : %llu\n",
+grub_printf("DEV DISK NAME: %s\n", dev->disk->name);
+
+grub_printf("DEV PART NUMBER: %d\n", partition->number);
+
+grub_printf("DEV PART START: %llu\n",
     (unsigned long long)partition->start);
 
-grub_printf("DEV PART LENGTH : %llu\n",
-    (unsigned long long)partition->len);
-
-grub_printf("DEV PART OFFSET : %llu\n",
-    (unsigned long long)partition->offset);
-
-grub_printf("DEV PART PARENT : %s\n",
-    partition->parent ? "YES" : "NO");
-
-grub_printf("DEV ABS START   : %llu\n",
+grub_printf("DEV ABS START: %llu\n",
     (unsigned long long)
     grub_partition_get_start(partition));
 
-grub_millisleep(5000);
+grub_printf("DEV PART LENGTH: %llu\n",
+    (unsigned long long)partition->len);
+
+grub_millisleep(3000);
 
 if (workaround)
 {
-    if (grub_strncmp(g_ventoy_part_info->Head.Signature,
-                     "EFI PART", 8) == 0)
+    if (grub_strncmp(
+        g_ventoy_part_info->Head.Signature,
+        "EFI PART", 8) == 0)
     {
         ventoy_gpt_part_tbl *PartTbl =
             g_ventoy_part_info->PartTbl;
 
-        if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
+        if (PartTbl[1].StartLBA !=
+                PartTbl[0].LastLBA + 1 ||
             (PartTbl[1].LastLBA + 1 -
              PartTbl[1].StartLBA) != 1048576)
         {
@@ -728,69 +712,48 @@ else
 {
     grub_printf("\n==== ERROR 7 DEBUG ====\n");
 
-    grub_printf("FIRST PARTITION:\n");
-
-    grub_printf("Start: %llu\n",
-        (unsigned long long)
-        grub_partition_get_start(partition));
-
-    grub_printf("Length: %llu\n",
-        (unsigned long long)partition->len);
-
-    grub_printf("Number: %d\n", partition->number);
-
     offset = grub_partition_get_start(partition)
              + partition->len;
 
-    grub_printf("Expected next partition start: %llu\n",
-        (unsigned long long)offset);
+    grub_printf("FIRST PARTITION START: %llu\n",
+        (unsigned long long)
+        grub_partition_get_start(partition));
 
-    /* FILE DEVICE CHECK */
+    grub_printf("FIRST PARTITION LENGTH: %llu\n",
+        (unsigned long long)partition->len);
+
+    grub_printf("EXPECTED NEXT START: %llu\n",
+        (unsigned long long)offset);
 
     if (file->device == NULL ||
         file->device->disk == NULL)
     {
-        grub_printf("FILE DEVICE OR DISK IS NULL!\n");
         grub_file_close(file);
         return ventoy_set_check_result(7,
             "File device is NULL.");
+    }
+
+    partition = file->device->disk->partition;
+
+    if (partition == NULL)
+    {
+        grub_file_close(file);
+        return ventoy_set_check_result(7,
+            "File partition is NULL.");
     }
 
     grub_printf("\n==== PARTITION COMPARISON ====\n");
 
     grub_printf("DEV DISK: %s\n", dev->disk->name);
 
-    grub_printf("DEV START: %llu\n",
-        (unsigned long long)
-        grub_partition_get_start(dev->disk->partition));
-
     grub_printf("FILE DISK: %s\n",
         file->device->disk->name);
-
-    partition = file->device->disk->partition;
-
-    if (partition == NULL)
-    {
-        grub_printf("FILE PARTITION IS NULL!\n");
-        grub_file_close(file);
-        return ventoy_set_check_result(7,
-            "File partition is NULL.");
-    }
-
-    char *part_name = grub_partition_get_name(partition);
-
-    grub_printf("FILE PARTITION: %s\n",
-        part_name ? part_name : "UNKNOWN");
-
-    if (part_name)
-        grub_free(part_name);
 
     grub_printf("FILE PART NUMBER: %d\n",
         partition->number);
 
     grub_printf("FILE PART START: %llu\n",
-        (unsigned long long)
-        partition->start);
+        (unsigned long long)partition->start);
 
     grub_printf("FILE ABS START: %llu\n",
         (unsigned long long)
@@ -800,8 +763,6 @@ else
         (unsigned long long)partition->len);
 
     grub_printf("==============================\n");
-
-    grub_millisleep(5000);
 
     if (partition->number != 2 ||
         partition->len != 2097152 ||
@@ -5260,12 +5221,12 @@ int ventoy_load_part_table(const char *diskname)
     grub_device_t dev;
 
     g_ventoy_part_info = grub_zalloc(sizeof(ventoy_gpt_info));
+
     if (!g_ventoy_part_info)
     {
         return 1;
     }
 
-    /* Open disk */
     disk = grub_disk_open(diskname);
 
     if (!disk)
@@ -5274,11 +5235,9 @@ int ventoy_load_part_table(const char *diskname)
         return 1;
     }
 
-    /* DISK DEBUG */
     grub_printf("\n==== DISK DEBUG ====\n");
-
     grub_printf("DISKNAME: %s\n", diskname);
-    grub_printf("DISK ID: %d\n", disk->id);
+    grub_printf("DISK ID: %lu\n", (unsigned long)disk->id);
 
     g_ventoy_disk_size =
         disk->total_sectors * (1U << disk->log_sector_size);
@@ -5286,18 +5245,16 @@ int ventoy_load_part_table(const char *diskname)
     grub_printf("DISK SIZE: %llu\n",
         (unsigned long long)g_ventoy_disk_size);
 
-    grub_millisleep(5000);
-
     g_ventoy_disk_bios_id = disk->id;
 
-    /* Read partition table */
     grub_disk_read(disk, 0, 0,
         sizeof(ventoy_gpt_info), g_ventoy_part_info);
 
     grub_disk_close(disk);
 
-    /* Open target VTOYEFI partition: (hd1,gpt3) */
-    grub_snprintf(name, sizeof(name), "hd1,gpt3");
+    /* Open VTOYEFI partition: GPT3 */
+
+    grub_snprintf(name, sizeof(name), "%s,gpt3", diskname);
 
     grub_printf("TARGET DEVICE: (%s)\n", name);
 
@@ -5305,7 +5262,6 @@ int ventoy_load_part_table(const char *diskname)
 
     if (dev)
     {
-        /* Check for official Ventoy device */
         ret = ventoy_check_official_device(dev);
 
         grub_device_close(dev);
@@ -5317,7 +5273,7 @@ int ventoy_load_part_table(const char *diskname)
     }
     else
     {
-        grub_printf("Failed to open target device: (%s)\n", name);
+        grub_printf("Failed to open device: (%s)\n", name);
         return 1;
     }
 
