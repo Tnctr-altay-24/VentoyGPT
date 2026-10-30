@@ -645,69 +645,92 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-    /* DEVICE SOURCE DEBUG */
+    
+/* DEVICE SOURCE DEBUG */
 
 grub_printf("\n==== DEVICE SOURCE DEBUG ====\n");
+
+if (dev == NULL || dev->disk == NULL)
+{
+    grub_printf("DEV OR DISK IS NULL!\n");
+    grub_file_close(file);
+    return ventoy_set_check_result(7,
+        "Device disk is NULL.");
+}
 
 grub_printf("DEV DISK NAME: %s\n", dev->disk->name);
 
 partition = dev->disk->partition;
 
-if (partition)
+if (partition == NULL)
 {
-    grub_printf("DEV PART NUMBER : %d\n", partition->number);
-
-    grub_printf("DEV PART INDEX  : %d\n", partition->index);
-
-    grub_printf("DEV PART START  : %llu\n",
-        (unsigned long long)partition->start);
-
-    grub_printf("DEV PART LENGTH : %llu\n",
-        (unsigned long long)partition->len);
-
-    grub_printf("DEV PART OFFSET : %llu\n",
-        (unsigned long long)partition->offset);
-
-    grub_printf("DEV PART PARENT : %s\n",
-        partition->parent ? "YES" : "NO");
-
-    grub_printf("ABSOLUTE START  : %llu\n",
-        (unsigned long long)
-        grub_partition_get_start(partition));
+    grub_printf("DEV PARTITION IS NULL!\n");
+    grub_file_close(file);
+    return ventoy_set_check_result(7,
+        "Device partition is NULL.");
 }
+
+grub_printf("DEV PART NUMBER : %d\n", partition->number);
+grub_printf("DEV PART INDEX  : %d\n", partition->index);
+
+grub_printf("DEV PART START  : %llu\n",
+    (unsigned long long)partition->start);
+
+grub_printf("DEV PART LENGTH : %llu\n",
+    (unsigned long long)partition->len);
+
+grub_printf("DEV PART OFFSET : %llu\n",
+    (unsigned long long)partition->offset);
+
+grub_printf("DEV PART PARENT : %s\n",
+    partition->parent ? "YES" : "NO");
+
+grub_printf("DEV ABS START   : %llu\n",
+    (unsigned long long)
+    grub_partition_get_start(partition));
 
 grub_millisleep(5000);
 
-    if (workaround)
+if (workaround)
+{
+    if (grub_strncmp(g_ventoy_part_info->Head.Signature,
+                     "EFI PART", 8) == 0)
     {
-    	if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
-    	{
-        	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-          	if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
-    			(PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 1048576)
-          	{
-              	grub_file_close(file);
-              	return ventoy_set_check_result(6, "Disk partition layout check failed.");
-          	}
-      	}
-      	else
-      	{
-          	ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-          	if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
-              	PartTbl[1].SectorCount != 1048576)
-          	{
-              	grub_file_close(file);
-              	return ventoy_set_check_result(6, "Disk partition layout check failed.");
-          	}
-      	}
-  	}
-	
+        ventoy_gpt_part_tbl *PartTbl =
+            g_ventoy_part_info->PartTbl;
+
+        if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
+            (PartTbl[1].LastLBA + 1 -
+             PartTbl[1].StartLBA) != 1048576)
+        {
+            grub_file_close(file);
+            return ventoy_set_check_result(6,
+                "Disk partition layout check failed.");
+        }
+    }
+    else
+    {
+        ventoy_part_table *PartTbl =
+            g_ventoy_part_info->MBR.PartTbl;
+
+        if (PartTbl[1].StartSectorId !=
+                PartTbl[0].StartSectorId +
+                PartTbl[0].SectorCount ||
+            PartTbl[1].SectorCount != 1048576)
+        {
+            grub_file_close(file);
+            return ventoy_set_check_result(6,
+                "Disk partition layout check failed.");
+        }
+    }
+}
 else
 {
     grub_printf("\n==== ERROR 7 DEBUG ====\n");
 
     grub_printf("FIRST PARTITION:\n");
-    grub_printf("Start : %llu\n",
+
+    grub_printf("Start: %llu\n",
         (unsigned long long)
         grub_partition_get_start(partition));
 
@@ -719,10 +742,19 @@ else
     offset = grub_partition_get_start(partition)
              + partition->len;
 
-    grub_printf("\nExpected next partition start: %llu\n",
+    grub_printf("Expected next partition start: %llu\n",
         (unsigned long long)offset);
 
-    partition = file->device->disk->partition;
+    /* FILE DEVICE CHECK */
+
+    if (file->device == NULL ||
+        file->device->disk == NULL)
+    {
+        grub_printf("FILE DEVICE OR DISK IS NULL!\n");
+        grub_file_close(file);
+        return ventoy_set_check_result(7,
+            "File device is NULL.");
+    }
 
     grub_printf("\n==== PARTITION COMPARISON ====\n");
 
@@ -735,7 +767,32 @@ else
     grub_printf("FILE DISK: %s\n",
         file->device->disk->name);
 
-    grub_printf("FILE START: %llu\n",
+    partition = file->device->disk->partition;
+
+    if (partition == NULL)
+    {
+        grub_printf("FILE PARTITION IS NULL!\n");
+        grub_file_close(file);
+        return ventoy_set_check_result(7,
+            "File partition is NULL.");
+    }
+
+    char *part_name = grub_partition_get_name(partition);
+
+    grub_printf("FILE PARTITION: %s\n",
+        part_name ? part_name : "UNKNOWN");
+
+    if (part_name)
+        grub_free(part_name);
+
+    grub_printf("FILE PART NUMBER: %d\n",
+        partition->number);
+
+    grub_printf("FILE PART START: %llu\n",
+        (unsigned long long)
+        partition->start);
+
+    grub_printf("FILE ABS START: %llu\n",
         (unsigned long long)
         grub_partition_get_start(partition));
 
@@ -746,8 +803,7 @@ else
 
     grub_millisleep(5000);
 
-    if (partition == NULL ||
-        partition->number != 2 ||
+    if (partition->number != 2 ||
         partition->len != 2097152 ||
         offset != grub_partition_get_start(partition))
     {
@@ -757,7 +813,7 @@ else
     }
 }
 
-	grub_file_close(file);
+grub_file_close(file);
 
     if (workaround == 0)
 	{
