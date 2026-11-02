@@ -5345,7 +5345,18 @@ static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int arg
     (void)argc;
     (void)ctxt;
 
-    ret = ventoy_load_part_table(args[0]);
+    grub_printf("\n==== CALL SOURCE DEBUG ====\n");
+
+	grub_printf("ARG COUNT: %d\n", argc);
+
+	if (argc > 0)
+	{
+    	grub_printf("DISK ARG: %s\n", args[0]);
+	}
+
+	grub_millisleep(5000);
+
+	ret = ventoy_load_part_table(args[0]);
     if (ret)
     {
         ventoy_prompt_end();
