@@ -711,6 +711,7 @@ else
         (unsigned long long)partition->start);
     grub_printf("VTOYEFI LENGTH: %llu\n",
         (unsigned long long)partition->len);
+	grub_millisleep(5000);
 
     if (partition->number != 2 || partition->len != 2097152 || offset != partition->start)
     {
