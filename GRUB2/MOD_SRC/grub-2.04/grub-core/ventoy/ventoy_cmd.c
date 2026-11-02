@@ -678,41 +678,7 @@ static int ventoy_check_official_device(grub_device_t dev)
 }
 else
 {
-    /* GPT2 - ISO partition */
     offset = partition->start + partition->len;
-
-    grub_printf("\n==== GPT2 DEBUG ====\n");
-    grub_printf("ISO PART NUMBER: %d\n", partition->number);
-    grub_printf("ISO START: %llu\n",
-        (unsigned long long)partition->start);
-    grub_printf("ISO LENGTH: %llu\n",
-        (unsigned long long)partition->len);
-    grub_printf("ISO END OFFSET: %llu\n",
-        (unsigned long long)offset);
-
-    if (partition->number != 1)
-    {
-        grub_file_close(file);
-        return ventoy_set_check_result(7, "ISO partition number incorrect.");
-    }
-
-    /* GPT3 - VTOYEFI partition */
-    partition = file->device->disk->partition;
-
-    if (partition == NULL)
-    {
-        grub_file_close(file);
-        return ventoy_set_check_result(7, "VTOYEFI partition is NULL.");
-    }
-
-    grub_printf("\n==== GPT3 DEBUG ====\n");
-    grub_printf("VTOYEFI PART NUMBER: %d\n", partition->number);
-    grub_printf("VTOYEFI START: %llu\n",
-        (unsigned long long)partition->start);
-    grub_printf("VTOYEFI LENGTH: %llu\n",
-        (unsigned long long)partition->len);
-	grub_millisleep(5000);
-
     if (partition->number != 2 || partition->len != 1312768 || offset != partition->start)
     {
         grub_file_close(file);
@@ -5167,60 +5133,37 @@ int ventoy_load_part_table(const char *diskname)
     grub_device_t dev;
 
     g_ventoy_part_info = grub_zalloc(sizeof(ventoy_gpt_info));
-
     if (!g_ventoy_part_info)
     {
         return 1;
     }
 
     disk = grub_disk_open(diskname);
-
     if (!disk)
     {
         debug("Failed to open disk %s\n", diskname);
         return 1;
     }
 
-    grub_printf("\n==== DISK DEBUG ====\n");
-    grub_printf("DISKNAME: %s\n", diskname);
-    grub_printf("DISK ID: %lu\n", (unsigned long)disk->id);
-
-    g_ventoy_disk_size =
-        disk->total_sectors * (1U << disk->log_sector_size);
-
-    grub_printf("DISK SIZE: %llu\n",
-        (unsigned long long)g_ventoy_disk_size);
+    g_ventoy_disk_size = disk->total_sectors * (1U << disk->log_sector_size);
 
     g_ventoy_disk_bios_id = disk->id;
 
-    grub_disk_read(disk, 0, 0,
-        sizeof(ventoy_gpt_info), g_ventoy_part_info);
-
+    grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
     grub_disk_close(disk);
 
-    /* Open VTOYEFI partition: GPT3 */
-
     grub_snprintf(name, sizeof(name), "%s,gpt3", diskname);
-
-    grub_printf("TARGET DEVICE: (%s)\n", name);
-
     dev = grub_device_open(name);
-
     if (dev)
     {
+        /* Check for official Ventoy device */
         ret = ventoy_check_official_device(dev);
-
         grub_device_close(dev);
 
         if (ret)
         {
             return 1;
         }
-    }
-    else
-    {
-        grub_printf("Failed to open device: (%s)\n", name);
-        return 1;
     }
 
     g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(1);
@@ -5290,17 +5233,6 @@ static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int arg
 
     (void)argc;
     (void)ctxt;
-
-    grub_printf("\n==== CALL SOURCE DEBUG ====\n");
-
-	grub_printf("ARG COUNT: %d\n", argc);
-
-	if (argc > 0)
-	{
-    	grub_printf("DISK ARG: %s\n", args[0]);
-	}
-
-	grub_millisleep(5000);
 
 	ret = ventoy_load_part_table(args[0]);
     if (ret)
