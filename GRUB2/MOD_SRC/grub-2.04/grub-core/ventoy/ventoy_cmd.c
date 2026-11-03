@@ -646,45 +646,217 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     
-	partition = dev->disk->partition;
-    if (partition->number != 1 || partition->start != 264192)
-    {
-        return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
-    }
+/* ==========================================
+ * VENTOY PARTITION DEBUG CHECK
+ * ========================================== */
 
-	if (workaround)
-	{
-    	if (grub_strncmp(
-        	g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
-    	{
-        	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-            if (PartTbl[2].StartLBA != PartTbl[1].LastLBA + 1 ||
-				(PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 1312768)
+grub_printf("\n[VENTOY-CHECK] Starting partition check...\n");
+grub_millisleep(5000);
+
+partition = dev->disk->partition;
+
+if (!partition)
+{
+    grub_printf("[VENTOY-ERROR] Partition pointer is NULL!\n");
+    grub_millisleep(5000);
+
+    return ventoy_set_check_result(
+        5,
+        "Partition pointer is NULL."
+    );
+}
+
+grub_printf("[VENTOY-CHECK] Partition number: %llu\n",
+            (unsigned long long)partition->number);
+grub_millisleep(5000);
+
+grub_printf("[VENTOY-CHECK] Partition start: %llu\n",
+            (unsigned long long)partition->start);
+grub_millisleep(5000);
+
+grub_printf("[VENTOY-CHECK] Expected partition number: 1\n");
+grub_printf("[VENTOY-CHECK] Expected partition start: 264192\n");
+grub_millisleep(5000);
+
+if (partition->number != 1 || partition->start != 264192)
+{
+    grub_printf("\n[VENTOY-ERROR] CHECK FAILED: ERROR 5\n");
+
+    grub_printf("Actual number: %llu\n",
+                (unsigned long long)partition->number);
+
+    grub_printf("Actual start: %llu\n",
+                (unsigned long long)partition->start);
+
+    grub_printf("Expected number: 1\n");
+    grub_printf("Expected start: 264192\n");
+
+    grub_millisleep(5000);
+
+    return ventoy_set_check_result(
+        5,
+        "The Ventoy partition does not start at the correct point."
+    );
+}
+
+grub_printf("[VENTOY-CHECK] Partition check PASSED\n");
+grub_millisleep(5000);
+
+
+if (workaround)
+{
+    grub_printf("[VENTOY-CHECK] Workaround mode ENABLED\n");
+    grub_millisleep(5000);
+
+    grub_printf("[VENTOY-CHECK] Checking GPT signature...\n");
+    grub_millisleep(5000);
+
+    if (grub_strncmp(
+        g_ventoy_part_info->Head.Signature,
+        "EFI PART",
+        8) == 0)
+    {
+        grub_printf("[VENTOY-CHECK] GPT signature detected\n");
+        grub_millisleep(5000);
+
+        ventoy_gpt_part_tbl *PartTbl =
+            g_ventoy_part_info->PartTbl;
+
+        grub_printf("[VENTOY-GPT] Partition 2 StartLBA: %llu\n",
+            (unsigned long long)PartTbl[2].StartLBA);
+        grub_millisleep(5000);
+
+        grub_printf("[VENTOY-GPT] Partition 1 LastLBA: %llu\n",
+            (unsigned long long)PartTbl[1].LastLBA);
+        grub_millisleep(5000);
+
+        grub_printf("[VENTOY-GPT] Partition 2 LastLBA: %llu\n",
+            (unsigned long long)PartTbl[2].LastLBA);
+        grub_millisleep(5000);
+
+        grub_printf("[VENTOY-GPT] Checking partition layout...\n");
+        grub_millisleep(5000);
+
+        if (PartTbl[2].StartLBA != PartTbl[1].LastLBA + 1 ||
+            (PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 1312768)
         {
+            grub_printf("[VENTOY-ERROR] GPT CHECK FAILED: ERROR 6\n");
+            grub_millisleep(5000);
+
             grub_file_close(file);
-            return ventoy_set_check_result(6, "Disk partition layout check failed.");
+
+            return ventoy_set_check_result(
+                6,
+                "Disk partition layout check failed."
+            );
         }
+
+        grub_printf("[VENTOY-GPT] GPT partition layout PASSED\n");
+        grub_millisleep(5000);
     }
     else
     {
-        ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-        if (PartTbl[2].StartSectorId != PartTbl[1].StartSectorId + PartTbl[1].SectorCount ||
+        grub_printf("[VENTOY-CHECK] MBR signature detected\n");
+        grub_millisleep(5000);
+
+        ventoy_part_table *PartTbl =
+            g_ventoy_part_info->MBR.PartTbl;
+
+        grub_printf("[VENTOY-MBR] Partition 2 StartSectorId: %u\n",
+            (unsigned int)PartTbl[2].StartSectorId);
+        grub_millisleep(5000);
+
+        grub_printf("[VENTOY-MBR] Partition 1 StartSectorId: %u\n",
+            (unsigned int)PartTbl[1].StartSectorId);
+        grub_millisleep(5000);
+
+        grub_printf("[VENTOY-MBR] Partition 1 SectorCount: %u\n",
+            (unsigned int)PartTbl[1].SectorCount);
+        grub_millisleep(5000);
+
+        grub_printf("[VENTOY-MBR] Partition 2 SectorCount: %u\n",
+            (unsigned int)PartTbl[2].SectorCount);
+        grub_millisleep(5000);
+
+        grub_printf("[VENTOY-MBR] Checking partition layout...\n");
+        grub_millisleep(5000);
+
+        if (PartTbl[2].StartSectorId !=
+                PartTbl[1].StartSectorId + PartTbl[1].SectorCount ||
             PartTbl[2].SectorCount != 1312768)
         {
+            grub_printf("[VENTOY-ERROR] MBR CHECK FAILED: ERROR 6\n");
+            grub_millisleep(5000);
+
             grub_file_close(file);
-            return ventoy_set_check_result(6, "Disk partition layout check failed.");
+
+            return ventoy_set_check_result(
+                6,
+                "Disk partition layout check failed."
+            );
         }
+
+        grub_printf("[VENTOY-MBR] MBR partition layout PASSED\n");
+        grub_millisleep(5000);
     }
 }
 else
 {
+    grub_printf("[VENTOY-CHECK] Workaround mode DISABLED\n");
+    grub_millisleep(5000);
+
+    grub_printf("[VENTOY-CHECK] Partition start: %llu\n",
+        (unsigned long long)partition->start);
+    grub_millisleep(5000);
+
+    grub_printf("[VENTOY-CHECK] Partition length: %llu\n",
+        (unsigned long long)partition->len);
+    grub_millisleep(5000);
+
     offset = partition->start + partition->len;
-    if (partition->number != 2 || partition->len != 1312768 || offset != partition->start)
+
+    grub_printf("[VENTOY-CHECK] Calculated offset: %llu\n",
+        (unsigned long long)offset);
+    grub_millisleep(5000);
+
+    grub_printf("[VENTOY-CHECK] Expected partition number: 2\n");
+    grub_printf("[VENTOY-CHECK] Expected partition length: 1312768\n");
+    grub_millisleep(5000);
+
+    if (partition->number != 2 ||
+        partition->len != 1312768 ||
+        offset != partition->start)
     {
+        grub_printf("[VENTOY-ERROR] CHECK FAILED: ERROR 7\n");
+
+        grub_printf("Partition number: %llu\n",
+            (unsigned long long)partition->number);
+
+        grub_printf("Partition length: %llu\n",
+            (unsigned long long)partition->len);
+
+        grub_printf("Calculated offset: %llu\n",
+            (unsigned long long)offset);
+
+        grub_printf("Partition start: %llu\n",
+            (unsigned long long)partition->start);
+
+        grub_millisleep(5000);
+
         grub_file_close(file);
-        return ventoy_set_check_result(7, "Disk partition layout check failed.");
+
+        return ventoy_set_check_result(
+            7,
+            "Disk partition layout check failed."
+        );
     }
+
+    grub_printf("[VENTOY-CHECK] Partition layout PASSED\n");
+    grub_millisleep(5000);
 }
+
+grub_printf("[VENTOY-CHECK] All partition checks PASSED\n");
+grub_millisleep(5000);
 
 grub_file_close(file);
 
