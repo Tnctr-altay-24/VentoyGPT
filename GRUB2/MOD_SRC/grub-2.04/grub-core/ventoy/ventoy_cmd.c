@@ -5274,6 +5274,18 @@ end:
 
 int ventoy_load_part_table(const char *diskname)
 {
+    grub_printf("\n");
+    grub_printf("====================================\n");
+    grub_printf("VENTOY PARTITION DEBUG START\n");
+    grub_printf("====================================\n");
+
+    grub_millisleep(5000);
+
+    grub_printf("Disk name: %s\n", diskname);
+
+    grub_millisleep(5000);
+
+    /* Mevcut kod devam edecek */
     char name[64];
     int ret;
     grub_disk_t disk;
