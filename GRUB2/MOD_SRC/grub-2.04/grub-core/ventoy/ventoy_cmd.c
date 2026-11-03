@@ -5125,6 +5125,8 @@ end:
 }
 
 
+
+
 int ventoy_load_part_table(const char *diskname)
 {
     char name[64];
@@ -5132,42 +5134,152 @@ int ventoy_load_part_table(const char *diskname)
     grub_disk_t disk;
     grub_device_t dev;
 
+    debug("[VENTOY-DEBUG] ========================================\n");
+    debug("[VENTOY-DEBUG] ventoy_load_part_table START\n");
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] Disk name: %s\n", diskname);
+    grub_millisleep(5000);
+
     g_ventoy_part_info = grub_zalloc(sizeof(ventoy_gpt_info));
+
     if (!g_ventoy_part_info)
     {
+        debug("[VENTOY-ERROR] Memory allocation failed!\n");
+        grub_millisleep(5000);
         return 1;
     }
+
+    debug("[VENTOY-DEBUG] GPT memory allocated: %lu bytes\n",
+          (unsigned long)sizeof(ventoy_gpt_info));
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] Opening disk: %s\n", diskname);
+    grub_millisleep(5000);
 
     disk = grub_disk_open(diskname);
+
     if (!disk)
     {
-        debug("Failed to open disk %s\n", diskname);
+        debug("[VENTOY-ERROR] Failed to open disk: %s\n", diskname);
+        grub_millisleep(5000);
         return 1;
     }
 
-    g_ventoy_disk_size = disk->total_sectors * (1U << disk->log_sector_size);
+    debug("[VENTOY-DEBUG] Disk opened successfully\n");
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] Total sectors: %llu\n",
+          (unsigned long long)disk->total_sectors);
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] Sector size shift: %u\n",
+          disk->log_sector_size);
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] Sector size: %u bytes\n",
+          (unsigned int)(1U << disk->log_sector_size));
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] Disk ID: %u\n", disk->id);
+    grub_millisleep(5000);
+
+    g_ventoy_disk_size =
+        disk->total_sectors * (1ULL << disk->log_sector_size);
 
     g_ventoy_disk_bios_id = disk->id;
 
-    grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
+    debug("[VENTOY-DEBUG] Disk size: %llu bytes\n",
+          (unsigned long long)g_ventoy_disk_size);
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] BIOS disk ID: %u\n",
+          g_ventoy_disk_bios_id);
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] Reading GPT data from disk...\n");
+    grub_millisleep(5000);
+
+    ret = grub_disk_read(
+        disk,
+        0,
+        0,
+        sizeof(ventoy_gpt_info),
+        g_ventoy_part_info
+    );
+
+    if (ret)
+    {
+        debug("[VENTOY-ERROR] GPT read failed! Error: %d\n", ret);
+        grub_disk_close(disk);
+        grub_millisleep(5000);
+        return 1;
+    }
+
+    debug("[VENTOY-DEBUG] GPT data read successfully\n");
+    grub_millisleep(5000);
+
     grub_disk_close(disk);
 
+    debug("[VENTOY-DEBUG] Disk closed\n");
+    grub_millisleep(5000);
+
     grub_snprintf(name, sizeof(name), "%s,gpt3", diskname);
+
+    debug("[VENTOY-DEBUG] Checking partition: %s\n", name);
+    grub_millisleep(5000);
+
     dev = grub_device_open(name);
+
     if (dev)
     {
-        /* Check for official Ventoy device */
+        debug("[VENTOY-DEBUG] GPT3 partition opened\n");
+        grub_millisleep(5000);
+
+        debug("[VENTOY-DEBUG] Checking official Ventoy device...\n");
+        grub_millisleep(5000);
+
         ret = ventoy_check_official_device(dev);
+
+        debug("[VENTOY-DEBUG] Official device check result: %d\n", ret);
+        grub_millisleep(5000);
+
         grub_device_close(dev);
 
         if (ret)
         {
+            debug("[VENTOY-ERROR] Official device check failed!\n");
+            grub_millisleep(5000);
             return 1;
         }
+
+        debug("[VENTOY-DEBUG] Official device check passed\n");
+        grub_millisleep(5000);
+    }
+    else
+    {
+        debug("[VENTOY-WARNING] GPT3 partition could not be opened\n");
+        grub_millisleep(5000);
     }
 
+    debug("[VENTOY-DEBUG] Reading Ventoy partition sizes...\n");
+    grub_millisleep(5000);
+
     g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(1);
+
+    debug("[VENTOY-DEBUG] Partition 1 size: %llu\n",
+          (unsigned long long)g_ventoy_disk_part_size[0]);
+    grub_millisleep(5000);
+
     g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(2);
+
+    debug("[VENTOY-DEBUG] Partition 2 size: %llu\n",
+          (unsigned long long)g_ventoy_disk_part_size[1]);
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] ventoy_load_part_table SUCCESS\n");
+    debug("[VENTOY-DEBUG] ========================================\n");
+    grub_millisleep(5000);
 
     return 0;
 }
@@ -5227,21 +5339,65 @@ void ventoy_prompt_end(void)
     }
 }
 
-static grub_err_t ventoy_cmd_load_part_table(grub_extcmd_context_t ctxt, int argc, char **args)
+
+static grub_err_t ventoy_cmd_load_part_table(
+    grub_extcmd_context_t ctxt,
+    int argc,
+    char **args)
 {
     int ret;
 
-    (void)argc;
     (void)ctxt;
 
-	ret = ventoy_load_part_table(args[0]);
+    debug("[VENTOY-DEBUG] ========================================\n");
+    debug("[VENTOY-DEBUG] ventoy_cmd_load_part_table START\n");
+    grub_millisleep(5000);
+
+    if (argc < 1 || !args || !args[0])
+    {
+        debug("[VENTOY-ERROR] Invalid arguments!\n");
+        grub_millisleep(5000);
+
+        return grub_error(
+            GRUB_ERR_BAD_ARGUMENT,
+            "Disk name is required"
+        );
+    }
+
+    debug("[VENTOY-DEBUG] Argument disk: %s\n", args[0]);
+    grub_millisleep(5000);
+
+    ret = ventoy_load_part_table(args[0]);
+
+    debug("[VENTOY-DEBUG] ventoy_load_part_table returned: %d\n", ret);
+    grub_millisleep(5000);
+
     if (ret)
     {
+        debug("[VENTOY-ERROR] Partition table loading failed\n");
+        grub_millisleep(5000);
+
         ventoy_prompt_end();
     }
 
+    debug("[VENTOY-DEBUG] Updating partition sizes...\n");
+    grub_millisleep(5000);
+
     g_ventoy_disk_part_size[0] = ventoy_get_vtoy_partsize(1);
+
+    debug("[VENTOY-DEBUG] Final partition 1 size: %llu\n",
+          (unsigned long long)g_ventoy_disk_part_size[0]);
+    grub_millisleep(5000);
+
     g_ventoy_disk_part_size[1] = ventoy_get_vtoy_partsize(2);
+
+    debug("[VENTOY-DEBUG] Final partition 2 size: %llu\n",
+          (unsigned long long)g_ventoy_disk_part_size[1]);
+    grub_millisleep(5000);
+
+    debug("[VENTOY-DEBUG] ventoy_cmd_load_part_table END\n");
+    debug("[VENTOY-DEBUG] ========================================\n");
+    grub_millisleep(5000);
 
     return 0;
 }
