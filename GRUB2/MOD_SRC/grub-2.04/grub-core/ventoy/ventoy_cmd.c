@@ -645,63 +645,36 @@ static int ventoy_check_official_device(grub_device_t dev)
         return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
     }
 
-    
-/* ==========================================
- * VENTOY PARTITION DEBUG CHECK
- * ========================================== */
-
-grub_printf("\n[VENTOY-CHECK] Starting partition check...\n");
-grub_millisleep(5000);
-
 partition = dev->disk->partition;
 
-if (!partition)
+grub_printf("\n[VENTOY] Checking HDD partition...\n");
+
+grub_printf("Partition number: %llu\n",
+    (unsigned long long)partition->number);
+
+grub_printf("Partition start: %llu\n",
+    (unsigned long long)partition->start);
+
+grub_printf("Partition length: %llu\n",
+    (unsigned long long)partition->len);
+
+grub_millisleep(5000);
+
+if (partition->number != 3 ||
+    partition->start != 1312768 ||
+    partition->len != 2097152)
 {
-    grub_printf("[VENTOY-ERROR] Partition pointer is NULL!\n");
+    grub_printf("[VENTOY-ERROR] Partition check failed!\n");
     grub_millisleep(5000);
 
     return ventoy_set_check_result(
         5,
-        "Partition pointer is NULL."
+        "The VTOYEFI partition layout is incorrect."
     );
 }
 
-grub_printf("[VENTOY-CHECK] Partition number: %llu\n",
-            (unsigned long long)partition->number);
+grub_printf("[VENTOY] GPT3 partition check PASSED\n");
 grub_millisleep(5000);
-
-grub_printf("[VENTOY-CHECK] Partition start: %llu\n",
-            (unsigned long long)partition->start);
-grub_millisleep(5000);
-
-grub_printf("[VENTOY-CHECK] Expected partition number: 1\n");
-grub_printf("[VENTOY-CHECK] Expected partition start: 264192\n");
-grub_millisleep(5000);
-
-if (partition->number != 1 || partition->start != 264192)
-{
-    grub_printf("\n[VENTOY-ERROR] CHECK FAILED: ERROR 5\n");
-
-    grub_printf("Actual number: %llu\n",
-                (unsigned long long)partition->number);
-
-    grub_printf("Actual start: %llu\n",
-                (unsigned long long)partition->start);
-
-    grub_printf("Expected number: 1\n");
-    grub_printf("Expected start: 264192\n");
-
-    grub_millisleep(5000);
-
-    return ventoy_set_check_result(
-        5,
-        "The Ventoy partition does not start at the correct point."
-    );
-}
-
-grub_printf("[VENTOY-CHECK] Partition check PASSED\n");
-grub_millisleep(5000);
-
 
 if (workaround)
 {
