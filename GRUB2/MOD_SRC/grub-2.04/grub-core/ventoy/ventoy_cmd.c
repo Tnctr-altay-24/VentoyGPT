@@ -660,7 +660,7 @@ grub_printf("Partition length: %llu\n",
 
 grub_millisleep(5000);
 
-if (partition->number != 3 ||
+if (partition->number != 2 ||
     partition->start != 1312768 ||
     partition->len != 2097152)
 {
@@ -797,7 +797,7 @@ else
     grub_millisleep(5000);
 
     if (partition->number != 2 ||
-        partition->len != 1312768 ||
+        partition->len != 2097152 ||
         offset != partition->start)
     {
         grub_printf("[VENTOY-ERROR] CHECK FAILED: ERROR 7\n");
