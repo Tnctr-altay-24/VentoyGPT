@@ -688,7 +688,7 @@ grub_millisleep(10000);
     	{
         	ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
           	if (PartTbl[2].StartLBA != PartTbl[1].LastLBA + 1 ||
-            	(PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 1312768)
+				(PartTbl[2].LastLBA + 1 - PartTbl[2].StartLBA) != 2097152)
           	{
               	grub_file_close(file);
               	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -698,7 +698,7 @@ grub_millisleep(10000);
       	{
           	ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
           	if (PartTbl[2].StartSectorId != PartTbl[1].StartSectorId + PartTbl[1].SectorCount ||
-            	PartTbl[2].SectorCount != 1312768)
+            	PartTbl[2].SectorCount != 2097152)
           	{
               	grub_file_close(file);
               	return ventoy_set_check_result(6, "Disk partition layout check failed.");
@@ -709,7 +709,7 @@ grub_millisleep(10000);
   	{
       	offset = partition->start + partition->len;
       	partition = file->device->disk->partition;
-      	if (partition->number != 2 || partition->len != 1312768 || offset != partition->start)
+      	if ((partition->number != 2) || (partition->len != 2097152) || (offset != partition->start))
       	{
           	grub_file_close(file);
           	return ventoy_set_check_result(7, "Disk partition layout check failed.");
