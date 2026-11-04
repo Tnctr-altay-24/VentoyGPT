@@ -5171,7 +5171,7 @@ int ventoy_load_part_table(const char *diskname)
     grub_printf("[VENTOY] Sector size: %u bytes\n",
         (unsigned int)(1U << disk->log_sector_size));
 
-    grub_printf("[VENTOY] Disk ID: %u\n", disk->id);
+    grub_printf("[VENTOY] Disk ID: %lu\n", (unsigned long)disk->id);
 
     g_ventoy_disk_size =
         disk->total_sectors * (1ULL << disk->log_sector_size);
