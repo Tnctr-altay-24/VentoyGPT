@@ -5181,7 +5181,7 @@ int ventoy_load_part_table(const char *diskname)
     grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
     grub_disk_close(disk);
 
-    grub_snprintf(name, sizeof(name), "%s,gpt3", diskname);
+    grub_snprintf(name, sizeof(name), "%s,2", diskname);
     dev = grub_device_open(name);
     if (dev)
     {
