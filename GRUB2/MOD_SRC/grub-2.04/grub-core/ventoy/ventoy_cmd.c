@@ -647,10 +647,35 @@ static int ventoy_check_official_device(grub_device_t dev)
 
 	partition = dev->disk->partition;
 
-	grub_printf("Disk: %s\n", dev->disk->name);
-	grub_printf("Partition number: %d\n", partition->number);
-	grub_printf("Partition start: %llu\n", (unsigned long long)partition->start);
-	grub_millisleep(5000);
+	grub_printf("\n===== VENTOY PARTITION DEBUG =====\n");
+
+grub_printf("DEV DISK: %s\n", dev->disk->name);
+
+grub_printf("DEV PARTITION NUMBER: %d\n",
+    dev->disk->partition->number);
+
+grub_printf("DEV PARTITION START: %llu\n",
+    (unsigned long long)dev->disk->partition->start);
+
+grub_printf("DEV PARTITION LENGTH: %llu\n",
+    (unsigned long long)dev->disk->partition->len);
+
+grub_printf("----------------------------------\n");
+
+grub_printf("FILE DISK: %s\n", file->device->disk->name);
+
+grub_printf("FILE PARTITION NUMBER: %d\n",
+    file->device->disk->partition->number);
+
+grub_printf("FILE PARTITION START: %llu\n",
+    (unsigned long long)file->device->disk->partition->start);
+
+grub_printf("FILE PARTITION LENGTH: %llu\n",
+    (unsigned long long)file->device->disk->partition->len);
+
+grub_printf("==================================\n");
+
+grub_millisleep(10000);
 
     if (partition->number != 1 || partition->start != 264192)
     {
