@@ -720,7 +720,7 @@ grub_millisleep(10000);
 
     if (workaround == 0)
 	{
-    	grub_snprintf(devname, sizeof(devname), "%s,2", dev->disk->name);
+    	grub_snprintf(devname, sizeof(devname), "%s,3", dev->disk->name);
     	dev2 = grub_device_open(devname);
     	if (!dev2)
     	{
