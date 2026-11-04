@@ -646,6 +646,12 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
 	partition = dev->disk->partition;
+
+	grub_printf("Disk: %s\n", dev->disk->name);
+	grub_printf("Partition number: %d\n", partition->number);
+	grub_printf("Partition start: %llu\n", (unsigned long long)partition->start);
+	grub_millisleep(5000);
+
     if (partition->number != 1 || partition->start != 264192)
     {
         return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
