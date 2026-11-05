@@ -646,37 +646,6 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     partition = dev->disk->partition;
-
-	grub_printf("\n===== VENTOY PARTITION DEBUG =====\n");
-
-grub_printf("DEV DISK: %s\n", dev->disk->name);
-
-grub_printf("DEV PARTITION NUMBER: %d\n",
-    dev->disk->partition->number);
-
-grub_printf("DEV PARTITION START: %llu\n",
-    (unsigned long long)dev->disk->partition->start);
-
-grub_printf("DEV PARTITION LENGTH: %llu\n",
-    (unsigned long long)dev->disk->partition->len);
-
-grub_printf("----------------------------------\n");
-
-grub_printf("FILE DISK: %s\n", file->device->disk->name);
-
-grub_printf("FILE PARTITION NUMBER: %d\n",
-    file->device->disk->partition->number);
-
-grub_printf("FILE PARTITION START: %llu\n",
-    (unsigned long long)file->device->disk->partition->start);
-
-grub_printf("FILE PARTITION LENGTH: %llu\n",
-    (unsigned long long)file->device->disk->partition->len);
-
-grub_printf("==================================\n");
-
-grub_millisleep(5000);
-
     if (partition->number != 2 || partition->start != 482799206)
     {
         return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
@@ -3050,7 +3019,7 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         ventoy_dynamic_tree_menu(node);
     }
 
-    /* Free iterator nodes */
+    /* free node */
     node = g_img_iterator_head.next;
     while (node)
     {
@@ -4401,8 +4370,8 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, 
     (void)args;
 
     /*
-     * args[0]: 0:normal    1:configfile
-     * args[1]: 0:list_buf  1:tree_buf
+     * args[0]:  0:normal     1:configfile
+     * args[1]:  0:list_buf   1:tree_buf
      */
 
     if (argc != 2)
@@ -4411,7 +4380,7 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, 
         return 0;
     }
 
-   	VTOY_CMD_CHECK(1);
+    VTOY_CMD_CHECK(1);
 
     if (args[0][0] == '0')
     {
@@ -5181,7 +5150,7 @@ int ventoy_load_part_table(const char *diskname)
     grub_disk_read(disk, 0, 0, sizeof(ventoy_gpt_info), g_ventoy_part_info);
     grub_disk_close(disk);
 
-    grub_snprintf(name, sizeof(name), "%s,2", diskname);
+    grub_snprintf(name, sizeof(name), "%s,3", diskname);
     dev = grub_device_open(name);
     if (dev)
     {
