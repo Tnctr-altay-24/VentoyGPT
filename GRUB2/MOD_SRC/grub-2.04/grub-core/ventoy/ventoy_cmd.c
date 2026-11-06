@@ -646,7 +646,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     }
 
     partition = dev->disk->partition;
-    if (partition->number != 2 || partition->start != 482799206)
+    if (partition->number != 0 || partition->start != 2048)
     {
         return ventoy_set_check_result(5, "The Ventoy partition does not start at the correct point.");
     }
