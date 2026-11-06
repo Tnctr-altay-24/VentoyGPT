@@ -715,14 +715,12 @@ static int ventoy_check_official_device(grub_device_t dev)
 
 	/* MBR check */
 	disk = grub_disk_open(dev->disk->name);
-
 	if (!disk)
 	{
     	return ventoy_set_check_result(11, "Disk open failed");
 	}
 
 	grub_memset(mbr, 0, 512);
-
 	if (grub_disk_read(disk, 0, 0, 512, mbr))
 	{
     	grub_disk_close(disk);
@@ -741,6 +739,8 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_disk_close(disk);
     	return ventoy_set_check_result(13, "GPT GUID read failed");
 	}
+
+	return ventoy_set_check_result(0, NULL);
 }
 
 static int ventoy_check_ignore_flag(const char *filename, const struct grub_dirhook_info *info, void *data)
