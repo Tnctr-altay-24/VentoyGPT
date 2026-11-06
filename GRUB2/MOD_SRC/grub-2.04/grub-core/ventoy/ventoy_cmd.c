@@ -3120,7 +3120,10 @@ fail:
 
 int ventoy_get_disk_guid(const char *filename, grub_uint8_t *guid, grub_uint8_t *signature)
 {
-    grub_disk_t disk;
+    grub_printf("\n>>> ventoy_get_disk_guid CALLED <<<\n");
+	grub_millisleep(5000);
+
+	grub_disk_t disk;
     char *device_name;
     char *pos;
     char *pos2;
@@ -3148,12 +3151,18 @@ int ventoy_get_disk_guid(const char *filename, grub_uint8_t *guid, grub_uint8_t 
         *pos2 = 0;
     }
 
-    disk = grub_disk_open(pos);
+    grub_printf("Opening disk: %s\n", pos);
+	grub_millisleep(3000);
+
+	disk = grub_disk_open(pos);
     if (disk)
     {
         grub_disk_read(disk, 1, 0x38, 16, guid);
         grub_disk_read(disk, 0, 0x1b8, 4, signature);
         grub_disk_close(disk);
+		grub_printf("Disk opened successfully!\n");
+		grub_millisleep(3000);
+
 		grub_printf("\nGPT GUID raw: ");
 
 		int i;
