@@ -590,6 +590,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     grub_uint64_t offset;
     char devname[64];
     grub_fs_t fs;
+	grub_uint8_t guid[16];
     grub_uint8_t mbr[512];
     grub_disk_t disk;
     grub_device_t dev2;
@@ -3155,7 +3156,9 @@ int ventoy_get_disk_guid(const char *filename, grub_uint8_t *guid, grub_uint8_t 
         grub_disk_close(disk);
 		grub_printf("\nGPT GUID raw: ");
 
-		for (int i = 0; i < 16; i++)
+		int i;
+
+		for (i = 0; i < 16; i++)
 		{
     		grub_printf("%02X ", guid[i]);
 		}
