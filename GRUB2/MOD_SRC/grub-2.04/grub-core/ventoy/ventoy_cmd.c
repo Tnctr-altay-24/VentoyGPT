@@ -715,21 +715,32 @@ static int ventoy_check_official_device(grub_device_t dev)
 
 	/* MBR check */
 	disk = grub_disk_open(dev->disk->name);
+
 	if (!disk)
 	{
     	return ventoy_set_check_result(11, "Disk open failed");
 	}
 
 	grub_memset(mbr, 0, 512);
-	grub_disk_read(disk, 0, 0, 512, mbr);
-	grub_disk_close(disk);
 
-	if (grub_memcmp(g_check_mbr_data, mbr, 512))
+	if (grub_disk_read(disk, 0, 0, 512, mbr))
 	{
+    	grub_disk_close(disk);
+    	return ventoy_set_check_result(12, "MBR read failed");
+	}
+
+	if (grub_memcmp(g_check_mbr_data, mbr, 0x30))
+	{
+    	grub_disk_close(disk);
     	return ventoy_set_check_result(12, "MBR check failed");
 	}
 
-	return ventoy_set_check_result(0, NULL);
+	/* GPT Disk GUID check */
+	if (grub_disk_read(disk, 1, 0x38, 16, guid))
+	{
+    	grub_disk_close(disk);
+    	return ventoy_set_check_result(13, "GPT GUID read failed");
+	}
 }
 
 static int ventoy_check_ignore_flag(const char *filename, const struct grub_dirhook_info *info, void *data)
@@ -3139,9 +3150,20 @@ int ventoy_get_disk_guid(const char *filename, grub_uint8_t *guid, grub_uint8_t 
     disk = grub_disk_open(pos);
     if (disk)
     {
-        grub_disk_read(disk, 0, 0x180, 16, guid);
+        grub_disk_read(disk, 1, 0x38, 16, guid);
         grub_disk_read(disk, 0, 0x1b8, 4, signature);
         grub_disk_close(disk);
+		grub_printf("\nGPT GUID raw: ");
+
+		for (int i = 0; i < 16; i++)
+		{
+    		grub_printf("%02X ", guid[i]);
+		}
+
+		grub_printf("\n");
+
+		/* 5 saniye bekle */
+		grub_millisleep(5000);
     }
     else
     {
