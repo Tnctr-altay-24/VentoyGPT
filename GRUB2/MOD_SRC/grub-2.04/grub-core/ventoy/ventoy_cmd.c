@@ -591,7 +591,6 @@ static int ventoy_check_official_device(grub_device_t dev)
     char devname[64];
     grub_fs_t fs;
     grub_uint8_t mbr[512];
-    grub_disk_t disk;
     grub_device_t dev2;
     char *label = NULL;
     struct grub_partition *partition;
