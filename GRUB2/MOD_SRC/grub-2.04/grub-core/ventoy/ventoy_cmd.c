@@ -713,19 +713,16 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_device_close(dev2);
 	}
 
-/* MBR comparison DEBUG */
+int i;
 
-grub_printf("\n");
-grub_printf("========== MBR COMPARE DEBUG ==========\n");
-
-/* TEST 1: First 0x30 bytes */
+/* TEST 1 */
 grub_printf("\n[TEST 1] Offset 0x000 - Length 0x30\n");
 
 if (grub_memcmp(g_check_mbr_data, mbr, 0x30))
 {
     grub_printf("TEST 1: FAILED\n");
 
-    for (int i = 0; i < 0x30; i++)
+    for (i = 0; i < 0x30; i++)
     {
         if (g_check_mbr_data[i] != mbr[i])
         {
@@ -743,14 +740,14 @@ else
     grub_printf("TEST 1: PASSED\n");
 }
 
-/* TEST 2: Offset 0x190 - Length 16 */
+/* TEST 2 */
 grub_printf("\n[TEST 2] Offset 0x190 - Length 16\n");
 
 if (grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
 {
     grub_printf("TEST 2: FAILED\n");
 
-    for (int i = 0; i < 16; i++)
+    for (i = 0; i < 16; i++)
     {
         if (g_check_mbr_data[0x30 + i] != mbr[0x190 + i])
         {
@@ -768,9 +765,7 @@ else
     grub_printf("TEST 2: PASSED\n");
 }
 
-grub_printf("\n========== MBR COMPARE END =============\n");
-
-grub_printf("Waiting 5 seconds...\n");
+grub_printf("\nWaiting 5 seconds...\n");
 grub_millisleep(5000);
 
 /* Original check result */
