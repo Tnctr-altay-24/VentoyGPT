@@ -4535,27 +4535,29 @@ static grub_err_t ventoy_cmd_find_bootable_hdd(grub_extcmd_context_t ctxt, int a
         grub_snprintf(hdname, sizeof(hdname), "hd%d", id);
 
         disk = grub_disk_open(hdname);
-        if (!disk)
+if (!disk)
+{
+    debug("%s not exist\n", hdname);
+    break;
+}
+
+grub_memset(&mbr, 0, sizeof(mbr));
+
+if (grub_disk_read(disk, 0, 0, 512, &mbr) == 0)
+{
+    if (mbr.Byte55 == 0x55 && mbr.ByteAA == 0xAA)
+    {
+        if (mbr.PartTbl[1].Active == 0x80 ||
+            mbr.PartTbl[2].Active == 0x80 ||
+            mbr.PartTbl[3].Active == 0x80)
         {
-            debug("%s not exist\n", hdname);
-            break;
+            grub_env_set(args[0], hdname);
+            find = 1;
         }
+    }
 
-        grub_memset(&mbr, 0, sizeof(mbr));
-		if (0 == grub_disk_read(disk, 0, 0, 512, &mbr))
-		{
-    		if (mbr.Byte55 == 0x55 && mbr.ByteAA == 0xAA)
-    		{
-        		if (mbr.PartTbl[0].Type == 0xEE || mbr.PartTbl[1].Active == 0x80 ||
-					mbr.PartTbl[2].Active == 0x80 || mbr.PartTbl[3].Active == 0x80)
-        		{
-            		grub_env_set(args[0], hdname);
-            		find = 1;
-        		}
-    		}
-
-    		debug("%s is %s\n", hdname, find ? "bootable" : "NOT bootable");
-		}
+    debug("%s is %s\n", hdname, find ? "bootable" : "NOT bootable");
+}
 		else
 		{
     		debug("read %s failed\n", hdname);
