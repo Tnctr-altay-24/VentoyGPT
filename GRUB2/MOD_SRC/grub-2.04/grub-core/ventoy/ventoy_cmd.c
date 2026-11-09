@@ -4575,7 +4575,7 @@ static grub_err_t ventoy_cmd_check_secureboot_var(grub_extcmd_context_t ctxt, in
     (void)args;
     return g_sys_sb ? 0 : 1;
 }
-#else
+#elif defined(GRUB_MACHINE_EFI)
 static grub_err_t ventoy_cmd_check_secureboot_var(grub_extcmd_context_t ctxt, int argc, char **args)
 {
     int ret = 1;
@@ -4596,7 +4596,6 @@ static grub_err_t ventoy_cmd_check_secureboot_var(grub_extcmd_context_t ctxt, in
     return ret;
 }
 #else
-
 static grub_err_t ventoy_cmd_check_secureboot_var(grub_extcmd_context_t ctxt, int argc, char **args)
 {
     (void)ctxt;
