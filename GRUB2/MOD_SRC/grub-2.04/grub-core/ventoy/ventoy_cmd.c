@@ -679,7 +679,10 @@ static int ventoy_check_official_device(grub_device_t dev)
 	}
 
 
-/* Custom MBR signature check */
+
+int i;
+
+/* TEST 1: Custom MBR signature */
 
 grub_printf("\n[TEST 1] Custom MBR signature check\n");
 
@@ -693,12 +696,16 @@ if (mbr[0x1BC] != 0xAD ||
     for (i = 0; i < 4; i++)
     {
         if (mbr[0x1BC + i] !=
-            (grub_uint8_t[]){0xAD, 0xDE, 0x06, 0x3C}[i])
+            (i == 0 ? 0xAD :
+             i == 1 ? 0xDE :
+             i == 2 ? 0x06 : 0x3C))
         {
             grub_printf(
                 "Mismatch Offset: 0x%03X Expected: 0x%02X Actual: 0x%02X\n",
                 (unsigned int)(0x1BC + i),
-                (unsigned int)((grub_uint8_t[]){0xAD, 0xDE, 0x06, 0x3C}[i]),
+                (unsigned int)(i == 0 ? 0xAD :
+                               i == 1 ? 0xDE :
+                               i == 2 ? 0x06 : 0x3C),
                 (unsigned int)mbr[0x1BC + i]
             );
         }
@@ -706,10 +713,8 @@ if (mbr[0x1BC] != 0xAD ||
 
     return ventoy_set_check_result(12, "Custom MBR check failed");
 }
-else
-{
-    grub_printf("TEST 1: PASSED\n");
-}
+
+grub_printf("TEST 1: PASSED\n");
 
 
 /* TEST 2: Standard MBR signature */
@@ -732,17 +737,12 @@ if (mbr[0x1FE] != 0x55 || mbr[0x1FF] != 0xAA)
 
     return ventoy_set_check_result(12, "MBR signature check failed");
 }
-else
-{
-    grub_printf("TEST 2: PASSED\n");
-}
+
+grub_printf("TEST 2: PASSED\n");
 
 
 grub_printf("\nWaiting 5 seconds...\n");
 grub_millisleep(5000);
-
-
-/* Original check result */
 
 return ventoy_set_check_result(0, NULL);
 
@@ -4512,9 +4512,7 @@ if (grub_disk_read(disk, 0, 0, 512, &mbr) == 0)
 {
     if (mbr.Byte55 == 0x55 && mbr.ByteAA == 0xAA)
     {
-        if (mbr.PartTbl[1].Active == 0x80 ||
-            mbr.PartTbl[2].Active == 0x80 ||
-            mbr.PartTbl[3].Active == 0x80)
+        if (mbr.PartTbl[1].Active == 0x80 || mbr.PartTbl[2].Active == 0x80 || mbr.PartTbl[3].Active == 0x80)
         {
             grub_env_set(args[0], hdname);
             find = 1;
