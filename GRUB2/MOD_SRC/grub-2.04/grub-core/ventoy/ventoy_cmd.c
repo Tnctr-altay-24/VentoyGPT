@@ -727,9 +727,9 @@ if (grub_memcmp(g_check_mbr_data, mbr, 0x30))
         {
             grub_printf(
                 "Mismatch Offset: 0x%03X Expected: 0x%02X Actual: 0x%02X\n",
-                i,
-                g_check_mbr_data[i],
-                mbr[i]
+                (unsigned int)i,
+                (unsigned int)g_check_mbr_data[i],
+                (unsigned int)mbr[i]
             );
         }
     }
@@ -738,7 +738,6 @@ else
 {
     grub_printf("TEST 1: PASSED\n");
 }
-
 /* TEST 2 */
 grub_printf("\n[TEST 2] Offset 0x190 - Length 16\n");
 
@@ -752,9 +751,9 @@ if (grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
         {
             grub_printf(
                 "Mismatch Offset: 0x%03X Expected: 0x%02X Actual: 0x%02X\n",
-                0x190 + i,
-                g_check_mbr_data[0x30 + i],
-                mbr[0x190 + i]
+                (unsigned int)(0x190 + i),
+                (unsigned int)g_check_mbr_data[0x30 + i],
+                (unsigned int)mbr[0x190 + i]
             );
         }
     }
