@@ -749,38 +749,6 @@ static grub_err_t ventoy_cmd_strstr(grub_extcmd_context_t ctxt, int argc, char *
     return (grub_strstr(args[0], args[1])) ? 0 : 1;
 }
 
-static grub_err_t ventoy_cmd_strbegin(grub_extcmd_context_t ctxt, int argc, char **args)
-{
-    char *c0, *c1;
-
-    (void)ctxt;
-
-    if (argc != 2)
-    {
-        return 1;
-    }
-
-    c0 = args[0];
-    c1 = args[1];
-
-    while (*c0 && *c1)
-    {
-        if (*c0 != *c1)
-        {
-            return 1;
-        }
-        c0++;
-        c1++;
-    }
-
-    if (*c1)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
 static grub_err_t ventoy_cmd_strcasebegin(grub_extcmd_context_t ctxt, int argc, char **args)
 {
     char *c0, *c1;
