@@ -675,15 +675,15 @@ static int ventoy_check_official_device(grub_device_t dev)
    	 	}
 	}
 	else
-  {
-      offset = partition->start + partition->len;
-      partition = file->device->disk->partition;
-      if ((partition->number != 3) || (partition->len != 4202988) || (offset != partition->start))
-    {
-        grub_file_close(file);
-        return ventoy_set_check_result(7, "Disk partition layout check failed.");
-    }
-  }
+  	{
+      	offset = partition->start + partition->len;
+      	partition = file->device->disk->partition;
+      	if ((partition->number != 3) || (partition->len != 4202988) || (offset != partition->start))
+    	{
+        	grub_file_close(file);
+        	return ventoy_set_check_result(7, "Disk partition layout check failed.");
+    	}
+  	}
 
 	grub_file_close(file);
 
@@ -714,19 +714,36 @@ static int ventoy_check_official_device(grub_device_t dev)
 	}
 
 	/* MBR check */
+
 	disk = grub_disk_open(dev->disk->name);
 	if (!disk)
 	{
     	return ventoy_set_check_result(11, "Disk open failed");
 	}
 
-	grub_memset(mbr, 0, 512);
-	grub_disk_read(disk, 0, 0, 512, mbr);
+	grub_memset(mbr, 0, sizeof(mbr));
+
+	if (grub_disk_read(disk, 0, 0, 512, mbr))
+	{
+    	grub_disk_close(disk);
+    	return ventoy_set_check_result(11, "MBR read failed");
+	}
+
 	grub_disk_close(disk);
 
-	if (grub_memcmp(g_check_mbr_data, mbr, 512))
+	/* Custom MBR signature */
+
+	if (mbr[0x1B0] != 0xAD || mbr[0x1B1] != 0xDE ||
+    	mbr[0x1B2] != 0x06 || mbr[0x1B3] != 0x3C)
 	{
-    	return ventoy_set_check_result(12, "MBR check failed");
+    	return ventoy_set_check_result(12, "Custom MBR check failed");
+	}
+
+	/* Standard MBR signature */
+
+	if (mbr[0x1FE] != 0x55 || mbr[0x1FF] != 0xAA)
+	{
+    	return ventoy_set_check_result(12, "MBR signature check failed");
 	}
 
 	return ventoy_set_check_result(0, NULL);
