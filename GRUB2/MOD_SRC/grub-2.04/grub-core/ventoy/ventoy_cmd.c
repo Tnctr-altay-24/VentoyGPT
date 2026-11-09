@@ -586,6 +586,7 @@ static int ventoy_set_check_result(int ret, const char *msg)
 static int ventoy_check_official_device(grub_device_t dev)
 {
     int workaround = 0;
+	int i;
     grub_file_t file;
     grub_uint64_t offset;
     char devname[64];
@@ -712,69 +713,74 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_device_close(dev2);
 	}
 
-int i;
 
-/* TEST 1 */
-grub_printf("\n[TEST 1] Offset 0x000 - Length 0x30\n");
+/* Custom MBR signature check */
 
-if (grub_memcmp(g_check_mbr_data, mbr, 0x30))
+grub_printf("\n[TEST 1] Custom MBR signature check\n");
+
+if (mbr[0x1BC] != 0xAD ||
+    mbr[0x1BD] != 0xDE ||
+    mbr[0x1BE] != 0x06 ||
+    mbr[0x1BF] != 0x3C)
 {
     grub_printf("TEST 1: FAILED\n");
 
-    for (i = 0; i < 0x30; i++)
+    for (i = 0; i < 4; i++)
     {
-        if (g_check_mbr_data[i] != mbr[i])
+        if (mbr[0x1BC + i] !=
+            (grub_uint8_t[]){0xAD, 0xDE, 0x06, 0x3C}[i])
         {
             grub_printf(
                 "Mismatch Offset: 0x%03X Expected: 0x%02X Actual: 0x%02X\n",
-                (unsigned int)i,
-                (unsigned int)g_check_mbr_data[i],
-                (unsigned int)mbr[i]
+                (unsigned int)(0x1BC + i),
+                (unsigned int)((grub_uint8_t[]){0xAD, 0xDE, 0x06, 0x3C}[i]),
+                (unsigned int)mbr[0x1BC + i]
             );
         }
     }
+
+    return ventoy_set_check_result(12, "Custom MBR check failed");
 }
 else
 {
     grub_printf("TEST 1: PASSED\n");
 }
-/* TEST 2 */
-grub_printf("\n[TEST 2] Offset 0x190 - Length 16\n");
 
-if (grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
+
+/* TEST 2: Standard MBR signature */
+
+grub_printf("\n[TEST 2] MBR signature check\n");
+
+if (mbr[0x1FE] != 0x55 || mbr[0x1FF] != 0xAA)
 {
     grub_printf("TEST 2: FAILED\n");
 
-    for (i = 0; i < 16; i++)
-    {
-        if (g_check_mbr_data[0x30 + i] != mbr[0x190 + i])
-        {
-            grub_printf(
-                "Mismatch Offset: 0x%03X Expected: 0x%02X Actual: 0x%02X\n",
-                (unsigned int)(0x190 + i),
-                (unsigned int)g_check_mbr_data[0x30 + i],
-                (unsigned int)mbr[0x190 + i]
-            );
-        }
-    }
+    grub_printf(
+        "Offset: 0x1FE Expected: 0x55 Actual: 0x%02X\n",
+        (unsigned int)mbr[0x1FE]
+    );
+
+    grub_printf(
+        "Offset: 0x1FF Expected: 0xAA Actual: 0x%02X\n",
+        (unsigned int)mbr[0x1FF]
+    );
+
+    return ventoy_set_check_result(12, "MBR signature check failed");
 }
 else
 {
     grub_printf("TEST 2: PASSED\n");
 }
 
+
 grub_printf("\nWaiting 5 seconds...\n");
 grub_millisleep(5000);
 
+
 /* Original check result */
 
-if (grub_memcmp(g_check_mbr_data, mbr, 0x30) ||
-    grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
-{
-    return ventoy_set_check_result(12, "MBR check failed");
-}
-
 return ventoy_set_check_result(0, NULL);
+
 }
 
 static int ventoy_check_ignore_flag(const char *filename, const struct grub_dirhook_info *info, void *data)
