@@ -118,8 +118,8 @@ typedef struct ventoy_os_param
 
 #pragma pack()
 
-int vtoy_find_disk_by_guid(ventoy_os_param *param, char *diskname);
+int vtoy_find_disk_by_identity(ventoy_os_param *param, char *diskname);
+int vtoy_find_disk_by_size(unsigned long long size, char *diskname);
 #endif
 
 #define _ULL unsigned long long
-
