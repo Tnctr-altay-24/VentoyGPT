@@ -739,6 +739,13 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_printf("Custom MBR: %02X %02X %02X %02X\n",
         	mbr[0x1B0], mbr[0x1B1], mbr[0x1B2], mbr[0x1B3]);
 
+		grub_printf("Custom MBR: %02X %02X %02X %02X\n", (unsigned char)mbr[0x1B0], (unsigned char)mbr[0x1B1],
+    				(unsigned char)mbr[0x1B2], (unsigned char)mbr[0x1B3]);
+
+		grub_printf("Standard MBR: %02X %02X\n", (unsigned char)mbr[0x1FE], (unsigned char)mbr[0x1FF]
+		);
+		grub_millisleep(5000);
+
     	return ventoy_set_check_result(12, "Custom MBR check failed");
 	}
 
