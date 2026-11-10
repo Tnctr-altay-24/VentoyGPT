@@ -52,7 +52,7 @@
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
-static grub_uint8_t g_check_mbr_data[512] __attribute__((unused)) = {
+static grub_uint8_t g_check_mbr_data[512] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -714,100 +714,35 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_device_close(dev2);
 	}
 
-	    /* MBR check - DEBUG */
+	/* MBR check */
+	disk = grub_disk_open(dev->disk->name);
+	if (!disk)
+	{
+    	return ventoy_set_check_result(11, "Disk open failed");
+	}
 
-    grub_printf("\n===== VENTOY MBR DEBUG =====\n");
+	grub_memset(mbr, 0, sizeof(mbr));
 
-    /* Disk information */
+	if (grub_disk_read(disk, 0, 0, 512, mbr))
+	{
+    	grub_disk_close(disk);
+    	return ventoy_set_check_result(11, "MBR read failed");
+	}
 
-    grub_printf("Target disk: %s\n", dev->disk->name);
+	grub_disk_close(disk);
 
-    grub_printf("Partition number: %d\n",
-        dev->disk->partition->number);
+	/* Custom MBR signature */
+	if (grub_memcmp(g_check_mbr_data + 0x1B0, mbr + 0x1B0, 4))
+	{
+    	return ventoy_set_check_result(12, "Custom MBR check failed");
+	}
 
-    grub_printf("Partition start: %llu\n",
-        (unsigned long long)dev->disk->partition->start);
+	/* Standard MBR signature */
+	if (grub_memcmp(g_check_mbr_data + 0x1FE, mbr + 0x1FE, 2))
+	{
+    	return ventoy_set_check_result(12, "MBR signature check failed");
+	}
 
-    grub_millisleep(2000);
-
-    /* Open physical disk */
-
-    disk = grub_disk_open(dev->disk->name);
-
-    if (!disk)
-    {
-        grub_printf("ERROR: Disk open failed\n");
-        grub_millisleep(5000);
-
-        return ventoy_set_check_result(11, "Disk open failed");
-    }
-
-    grub_memset(mbr, 0, sizeof(mbr));
-
-    grub_printf("Reading physical disk LBA 0...\n");
-
-    if (grub_disk_read(disk, 0, 0, 512, mbr))
-    {
-        grub_printf("ERROR: MBR read failed\n");
-
-        grub_disk_close(disk);
-        grub_millisleep(5000);
-
-        return ventoy_set_check_result(11, "MBR read failed");
-    }
-
-    grub_disk_close(disk);
-
-    /* Print raw MBR */
-
-    grub_printf("MBR FIRST 16 BYTES:\n");
-
-    for (i = 0; i < 16; i++)
-    {
-      grub_printf("%02x ", (unsigned char)mbr[i]);
-    }
-
-    grub_printf("\n");
-
-    /* Custom signature */
-
-    grub_printf("Custom MBR:\n");
-
-    grub_printf("%02x %02x %02x %02x\n",
-        (unsigned char)mbr[0x1B0],
-        (unsigned char)mbr[0x1B1],
-        (unsigned char)mbr[0x1B2],
-        (unsigned char)mbr[0x1B3]);
-
-    /* Standard signature */
-
-    grub_printf("Standard MBR:\n");
-
-    grub_printf("%02x %02x\n",
-        (unsigned char)mbr[0x1FE],
-        (unsigned char)mbr[0x1FF]);
-
-    grub_printf("============================\n");
-
-    grub_millisleep(5000);
-
-    /* Custom MBR validation */
-
-    if (mbr[0x1B0] != 0xAD ||
-        mbr[0x1B1] != 0xDE ||
-        mbr[0x1B2] != 0x06 ||
-        mbr[0x1B3] != 0x3C)
-    {
-        return ventoy_set_check_result(12, "Custom MBR check failed");
-    }
-
-    /* Standard MBR validation */
-
-    if (mbr[0x1FE] != 0x55 ||
-        mbr[0x1FF] != 0xAA)
-    {
-        return ventoy_set_check_result(12, "MBR signature check failed");
-    }
 	return ventoy_set_check_result(0, NULL);
 }
 
