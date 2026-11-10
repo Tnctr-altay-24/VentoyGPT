@@ -4496,7 +4496,7 @@ static grub_err_t ventoy_cmd_find_bootable_hdd(grub_extcmd_context_t ctxt, int a
         {
             if (mbr.Byte55 == 0x55 && mbr.ByteAA == 0xAA)
             {
-                if (mbr.PartTbl[0].Active == 0x1BE || mbr.PartTbl[1].Active == 0x80 ||
+                if (mbr.PartTbl[0].Active == 0x80 || mbr.PartTbl[1].Active == 0x80 ||
                     mbr.PartTbl[2].Active == 0x80 || mbr.PartTbl[3].Active == 0x80)
                 {
 
