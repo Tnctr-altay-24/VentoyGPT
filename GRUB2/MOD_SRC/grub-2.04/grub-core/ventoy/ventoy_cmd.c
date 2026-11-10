@@ -586,7 +586,6 @@ static int ventoy_set_check_result(int ret, const char *msg)
 static int ventoy_check_official_device(grub_device_t dev)
 {
     int workaround = 0;
-	int i;
     grub_file_t file;
     grub_uint64_t offset;
     char devname[64];
@@ -714,162 +713,24 @@ static int ventoy_check_official_device(grub_device_t dev)
     	grub_device_close(dev2);
 	}
 
-	
-/* MBR check - DEBUG */
+	/* MBR check */
+    disk = grub_disk_open(dev->disk->name);
+    if (!disk)
+    {
+        return ventoy_set_check_result(11, "Disk open failed");
+    }
 
-grub_printf("\n===== VENTOY MBR DEBUG =====\n");
-
-/* Disk information */
-
-grub_printf("Target disk: %s\n", dev->disk->name);
-
-grub_printf("Partition number: %d\n",
-    dev->disk->partition->number);
-
-grub_printf("Partition start: %llu\n",
-    (unsigned long long)dev->disk->partition->start);
-
-grub_millisleep(2000);
-
-/* Open physical disk */
-
-disk = grub_disk_open(dev->disk->name);
-
-if (!disk)
-{
-    grub_printf("ERROR: Disk open failed\n");
-    grub_millisleep(5000);
-
-    return ventoy_set_check_result(11, "Disk open failed");
-}
-
-grub_memset(mbr, 0, sizeof(mbr));
-
-grub_printf("Reading physical disk LBA 0...\n");
-
-/* IMPORTANT: Keep original read operation */
-
-if (grub_disk_read(disk, 0, 0, 512, mbr))
-{
-    grub_printf("ERROR: MBR read failed\n");
-
+    grub_memset(mbr, 0, 512);
+    grub_disk_read(disk, 0, 0, 512, mbr);
     grub_disk_close(disk);
-    grub_millisleep(5000);
 
-    return ventoy_set_check_result(11, "MBR read failed");
-}
-
-grub_disk_close(disk);
-
-/* Print first 16 bytes */
-
-grub_printf("\nMBR FIRST 16 BYTES:\n");
-
-for (i = 0; i < 16; i++)
-{
-    grub_printf("%02x ", (unsigned char)mbr[i]);
-}
-
-grub_printf("\n");
-
-/* Compare MBR data: 0x1A0 - 0x1BF */
-
-grub_printf("\n===== MBR COMPARISON =====\n");
-
-grub_printf("Offset   DISK   EXPECTED\n");
-
-for (i = 0x1A0; i < 0x1C0; i++)
-{
-    grub_printf("%04x     %02x     %02x",
-        i,
-        (unsigned char)mbr[i],
-        (unsigned char)g_check_mbr_data[i]);
-
-    if (mbr[i] != g_check_mbr_data[i])
+    if (grub_memcmp(g_check_mbr_data, mbr, 0x1B8) || grub_memcmp(g_check_mbr_data + 0x1B8, mbr + 0x1B8, 16) ||
+    	grub_memcmp(g_check_mbr_data + 0x1FE, mbr + 0x1FE, 2))
     {
-        grub_printf("  <-- DIFFERENT");
+        return ventoy_set_check_result(12, "MBR check failed");
     }
 
-    grub_printf("\n");
-}
-
-grub_printf("==========================\n");
-
-/* Find first different byte */
-
-for (i = 0; i < 512; i++)
-{
-    if (mbr[i] != g_check_mbr_data[i])
-    {
-        grub_printf("\nFIRST DIFFERENCE:\n");
-        grub_printf("Offset: 0x%03x\n", i);
-        grub_printf("Disk: %02x\n",
-            (unsigned char)mbr[i]);
-        grub_printf("Expected: %02x\n",
-            (unsigned char)g_check_mbr_data[i]);
-
-        break;
-    }
-}
-
-if (i == 512)
-{
-    grub_printf("\nALL 512 BYTES MATCH!\n");
-}
-
-/* Custom signature */
-
-grub_printf("\nCustom MBR:\n");
-
-grub_printf("%02x %02x %02x %02x\n",
-    (unsigned char)mbr[0x1B0],
-    (unsigned char)mbr[0x1B1],
-    (unsigned char)mbr[0x1B2],
-    (unsigned char)mbr[0x1B3]);
-
-/* Expected custom signature */
-
-grub_printf("Expected Custom MBR:\n");
-
-grub_printf("%02x %02x %02x %02x\n",
-    (unsigned char)g_check_mbr_data[0x1B0],
-    (unsigned char)g_check_mbr_data[0x1B1],
-    (unsigned char)g_check_mbr_data[0x1B2],
-    (unsigned char)g_check_mbr_data[0x1B3]);
-
-/* Standard signature */
-
-grub_printf("\nStandard MBR:\n");
-
-grub_printf("%02x %02x\n",
-    (unsigned char)mbr[0x1FE],
-    (unsigned char)mbr[0x1FF]);
-
-grub_printf("============================\n");
-
-grub_millisleep(5000);
-
-/* Custom MBR validation */
-
-if (mbr[0x1B0] != 0xAD ||
-    mbr[0x1B1] != 0xDE ||
-    mbr[0x1B2] != 0x06 ||
-    mbr[0x1B3] != 0x3C)
-{
-    return ventoy_set_check_result(12,
-        "Custom MBR check failed");
-}
-
-/* Standard MBR validation */
-
-if (mbr[0x1FE] != 0x55 ||
-    mbr[0x1FF] != 0xAA)
-{
-    return ventoy_set_check_result(12,
-        "MBR signature check failed");
-}
-
-	return ventoy_set_check_result(0, NULL);
+    return ventoy_set_check_result(0, NULL);
 }
 
 static int ventoy_check_ignore_flag(const char *filename, const struct grub_dirhook_info *info, void *data)
@@ -4635,7 +4496,7 @@ static grub_err_t ventoy_cmd_find_bootable_hdd(grub_extcmd_context_t ctxt, int a
         {
             if (mbr.Byte55 == 0x55 && mbr.ByteAA == 0xAA)
             {
-                if (mbr.PartTbl[0].Active == 0x80 || mbr.PartTbl[1].Active == 0x80 ||
+                if (mbr.PartTbl[0].Active == 0x1BE || mbr.PartTbl[1].Active == 0x80 ||
                     mbr.PartTbl[2].Active == 0x80 || mbr.PartTbl[3].Active == 0x80)
                 {
 
