@@ -1780,10 +1780,26 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
     int diskfind = 0;
     int partfind = 0;
     int filefind = 0;
-    char *disk, *device;
+    char *disk = NULL;
+    char *device = NULL;
     grub_uint32_t readcrc, calccrc;
     ventoy_vlnk_part *cur;
     grub_fs_t fs = NULL;
+
+    /* VLNK INPUT DEBUG */
+    grub_printf("\n===== VLNK INPUT DEBUG =====\n");
+
+    grub_printf("Disk Signature  : %08X\n",
+                vlnk->disk_signature);
+
+    grub_printf("Partition Offset: %llu\n",
+                (ulonglong)vlnk->part_offset);
+
+    grub_printf("File Path       : %s\n",
+                vlnk->filepath);
+
+    grub_refresh();
+    grub_millisleep(5000);
 
     if (grub_memcmp(&(vlnk->guid), &g_ventoy_guid, sizeof(ventoy_guid)))
     {
@@ -1791,6 +1807,7 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
         {
             grub_printf("VLNK invalid guid\n");
             grub_refresh();
+            grub_millisleep(5000);
         }
         return 1;
     }
@@ -1798,12 +1815,15 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
     readcrc = vlnk->crc32;
     vlnk->crc32 = 0;
     calccrc = grub_getcrc32c(0, vlnk, sizeof(ventoy_vlnk));
+
     if (readcrc != calccrc)
     {
         if (print)
         {
-            grub_printf("VLNK invalid crc 0x%08x 0x%08x\n", calccrc, readcrc);
+            grub_printf("VLNK invalid crc 0x%08x 0x%08x\n",
+                        calccrc, readcrc);
             grub_refresh();
+            grub_millisleep(5000);
         }
         return 1;
     }
@@ -1819,10 +1839,24 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
         {
             diskfind = 1;
             disk = cur->disk;
+
+            grub_printf("\n===== DISK MATCH =====\n");
+            grub_printf("Disk       : %s\n", cur->disk);
+            grub_printf("DiskSig    : %08X\n", cur->disksig);
+            grub_refresh();
+            grub_millisleep(5000);
+
             if (cur->partoffset == vlnk->part_offset)
             {
                 partfind = 1;
                 device = cur->device;
+
+                grub_printf("\n===== PARTITION MATCH =====\n");
+                grub_printf("Device     : %s\n", cur->device);
+                grub_printf("PartOffset : %llu\n",
+                            (ulonglong)cur->partoffset);
+                grub_refresh();
+                grub_millisleep(5000);
 
                 if (cur->probe == 0)
                 {
@@ -1839,18 +1873,48 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
                 {
                     struct grub_file file;
 
+                    grub_printf("\n===== FILE OPEN DEBUG =====\n");
+                    grub_printf("Device     : %s\n", cur->device);
+                    grub_printf("Filesystem : %s\n", cur->fs->name);
+                    grub_printf("File Path  : %s\n", vlnk->filepath);
+                    grub_refresh();
+                    grub_millisleep(5000);
+
                     grub_memset(&file, 0, sizeof(file));
                     file.device = cur->dev;
+
                     if (cur->fs->fs_open(&file, vlnk->filepath) == GRUB_ERR_NONE)
                     {
+                        grub_printf("\n===== FILE FOUND =====\n");
+                        grub_printf("Device : %s\n", cur->device);
+                        grub_printf("Path   : %s\n", vlnk->filepath);
+                        grub_refresh();
+                        grub_millisleep(5000);
+
                         filefind = 1;
+
                         cur->fs->fs_close(&file);
-                        grub_snprintf(dst, size - 1, "(%s)%s", cur->device, vlnk->filepath);
+
+                        grub_snprintf(dst, size - 1, "(%s)%s",
+                                      cur->device, vlnk->filepath);
                     }
                     else
                     {
+                        grub_printf("\n===== FILE NOT FOUND =====\n");
+                        grub_printf("Device : %s\n", cur->device);
+                        grub_printf("Path   : %s\n", vlnk->filepath);
+                        grub_refresh();
+                        grub_millisleep(5000);
+
                         grub_errno = 0;
                     }
+                }
+                else
+                {
+                    grub_printf("\n===== FILESYSTEM NOT FOUND =====\n");
+                    grub_printf("Device : %s\n", cur->device);
+                    grub_refresh();
+                    grub_millisleep(5000);
                 }
             }
         }
@@ -1862,7 +1926,9 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
                     "Disk Signature: %08x\n"
                     "Partition Offset: %llu\n"
                     "File Path: <%s>\n\n",
-                    vlnk->disk_signature, (ulonglong)vlnk->part_offset, vlnk->filepath);
+                    vlnk->disk_signature,
+                    (ulonglong)vlnk->part_offset,
+                    vlnk->filepath);
 
         if (diskfind)
         {
@@ -1875,13 +1941,17 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
 
         if (partfind)
         {
-            grub_printf("Part Find: [ YES ] [ %s ] [ %s ]\n", device, fs ? fs->name : "N/A");
+            grub_printf("Part Find: [ YES ] [ %s ] [ %s ]\n",
+                        device, fs ? fs->name : "N/A");
         }
         else
         {
             grub_printf("Part Find: [ NO ]\n");
         }
-        grub_printf("File Find: [ %s ]\n", filefind ? "YES" : "NO");
+
+        grub_printf("File Find: [ %s ]\n",
+                    filefind ? "YES" : "NO");
+
         if (filefind)
         {
             grub_printf("VLNK File: <%s>\n", dst);
@@ -1889,6 +1959,7 @@ static int ventoy_check_vlnk_data(ventoy_vlnk *vlnk, int print, char *dst, int s
 
         grub_printf("\n");
         grub_refresh();
+        grub_millisleep(5000);
     }
 
     return (1 - filefind);
