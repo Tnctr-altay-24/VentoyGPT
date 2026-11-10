@@ -724,7 +724,7 @@ static int ventoy_check_official_device(grub_device_t dev)
     grub_disk_read(disk, 0, 0, 512, mbr);
     grub_disk_close(disk);
 
-    if (grub_memcmp(g_check_mbr_data + 0x1B8, mbr + 0x1B8, 16))
+    if (grub_memcmp(g_check_mbr_data, mbr, 512))
     {
         return ventoy_set_check_result(12, "MBR check failed");
     }
