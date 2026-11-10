@@ -635,6 +635,11 @@ static int GetPhyDiskUUID(const char LogicalDrive, UINT8 *UUID, UINT32 *DiskSig,
     if (DiskSig)
     {
         memcpy(DiskSig, SectorBuf + 0x1B8, 4);
+
+        Log("DiskSig bytes: %02X %02X %02X %02X", SectorBuf[0x1B8], SectorBuf[0x1B9], SectorBuf[0x1BA], SectorBuf[0x1BB]);
+
+        Log("DiskSig value: %08X", *DiskSig);
+        Sleep(5000);
     }
 
     CloseHandle(Handle);
