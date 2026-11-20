@@ -209,11 +209,11 @@ int prepare_dmtable(void)
 
         fprintf(fOut, "%u %u linear /dev/%s %llu\n", 
                (sector_start << 2), disk_sector_num, 
-               disk, (unsigned long long)chunk.disk_start_sector - 2048);
+               disk, (unsigned long long)chunk.disk_start_sector - 482799206);
         
         vdebug("%u %u linear /dev/%s %llu\n", 
                (sector_start << 2), disk_sector_num, 
-               disk, (unsigned long long)chunk.disk_start_sector - 2048);
+               disk, (unsigned long long)chunk.disk_start_sector - 482799206);
     }
 
 end:    
