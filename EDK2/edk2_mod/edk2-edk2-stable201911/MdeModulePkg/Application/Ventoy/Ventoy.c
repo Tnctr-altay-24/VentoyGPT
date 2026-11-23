@@ -583,9 +583,9 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
             pMBR = (MBR_HEAD *)pBuffer;
             if (g_os_param_reserved[6] == 0 && pMBR->PartTbl[0].FsFlag != 0xEE)
             {
-                if (pMBR->PartTbl[0].StartSectorId != 2048 ||
-                    pMBR->PartTbl[1].SectorCount != 65536 ||
-                    pMBR->PartTbl[1].StartSectorId != pMBR->PartTbl[0].StartSectorId + pMBR->PartTbl[0].SectorCount)
+                if (pMBR->PartTbl[2].StartSectorId != 482799206 ||
+                    pMBR->PartTbl[3].SectorCount != 4202988 ||
+                    pMBR->PartTbl[3].StartSectorId != pMBR->PartTbl[2].StartSectorId + pMBR->PartTbl[2].SectorCount)
                 {
                     debug("Failed to check disk part table");
                     ventoy_warn_invalid_device();
