@@ -164,8 +164,8 @@ is_disk_contains_ventoy() {
         PART1_START=$(cat /sys/class/block/${PART1#/dev/}/start)
     fi
     
-    if [ "$PART1_START" != "482799206" ]; then
-        vtdebug "part1 start is $PART1_START not 482799206"
+    if [ "$PART1_START" != "4202988" ]; then
+        vtdebug "part1 start is $PART1_START not 4202988"
         ventoy_false
         return
     fi 
