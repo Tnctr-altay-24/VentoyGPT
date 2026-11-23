@@ -403,7 +403,8 @@ format_ventoy_disk_gpt() {
     
     sector_num=$(cat /sys/block/${DISK#/dev/}/size)
     
-    part1_start_sector=482799206
+    part1_start_sector=2048
+    part3_start_sector=482799206
     
     if [ $reserve_mb -gt 0 ]; then
         reserve_sector_num=$(expr $reserve_mb \* 2048 + 33)
