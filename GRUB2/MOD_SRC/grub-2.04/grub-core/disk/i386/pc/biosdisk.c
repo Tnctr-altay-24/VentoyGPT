@@ -374,17 +374,17 @@ static int ventoy_is_mbr_match(ventoy_mbr_head *head)
         return 0;
     }
 
-    if (head->PartTbl[0].StartSectorId != 2048) {
+    if (head->PartTbl[0].StartSectorId != 482799206) {
         return 0;
     }
 
-    if (head->PartTbl[1].Active != 0x80 || head->PartTbl[1].FsFlag != 0xEF) {
+    if (head->PartTbl[3].Active != 0x80 || head->PartTbl[3].FsFlag != 0xEF) {
         return 0;
     }
 
-    PartStartSector = head->PartTbl[0].StartSectorId + head->PartTbl[0].SectorCount;
+    PartStartSector = head->PartTbl[2].StartSectorId + head->PartTbl[2].SectorCount;
 
-    if (head->PartTbl[1].StartSectorId != PartStartSector || head->PartTbl[1].SectorCount != 65536) {
+    if (head->PartTbl[3].StartSectorId != PartStartSector || head->PartTbl[3].SectorCount != 4202988) {
         return 0;
     }
 
