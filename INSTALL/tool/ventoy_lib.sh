@@ -121,32 +121,32 @@ get_ventoy_version_from_cfg() {
 is_disk_contains_ventoy() {
     DISK=$1    
     
-    PART1=$(get_disk_part_name $1 1)  
-    PART2=$(get_disk_part_name $1 2)  
+    PART3=$(get_disk_part_name $1 3)  
+    PART4=$(get_disk_part_name $1 4)  
     
-    if [ -e /sys/class/block/${PART2#/dev/}/size ]; then    
-        SIZE=$(cat /sys/class/block/${PART2#/dev/}/size)
+    if [ -e /sys/class/block/${PART4#/dev/}/size ]; then    
+        SIZE=$(cat /sys/class/block/${PART4#/dev/}/size)
     else
         SIZE=0
     fi
 
-    if ! [ -b $PART1 ]; then
-        vtdebug "$PART1 not exist"
+    if ! [ -b $PART3 ]; then
+        vtdebug "$PART3 not exist"
         ventoy_false
         return
     fi
     
-    if ! [ -b $PART2 ]; then
-        vtdebug "$PART2 not exist"
+    if ! [ -b $PART4 ]; then
+        vtdebug "$PART4 not exist"
         ventoy_false
         return
     fi
     
-    PART1_TYPE=$(dd if=$DISK bs=1 count=1 skip=450 status=none | hexdump -n1 -e  '1/1 "%02X"')
-    PART2_TYPE=$(dd if=$DISK bs=1 count=1 skip=466 status=none | hexdump -n1 -e  '1/1 "%02X"')
+    PART3_TYPE=$(dd if=$DISK bs=1 count=1 skip=450 status=none | hexdump -n1 -e  '1/1 "%02X"')
+    PART4_TYPE=$(dd if=$DISK bs=1 count=1 skip=466 status=none | hexdump -n1 -e  '1/1 "%02X"')
     
-    # if [ "$PART1_TYPE" != "EE" ]; then
-        # if [ "$PART2_TYPE" != "EF" ]; then
+    # if [ "$PART3_TYPE" != "EE" ]; then
+        # if [ "$PART4_TYPE" != "EF" ]; then
             # vtdebug "part2 type is $PART2_TYPE not EF"
             # ventoy_false
             # return
@@ -154,24 +154,24 @@ is_disk_contains_ventoy() {
     # fi
     
     # PART1_TYPE=$(dd if=$DISK bs=1 count=1 skip=450 status=none | hexdump -n1 -e  '1/1 "%02X"')
-    # if [ "$PART1_TYPE" != "07" ]; then
+    # if [ "$PART3_TYPE" != "07" ]; then
         # vtdebug "part1 type is $PART2_TYPE not 07"
         # ventoy_false
         # return
     # fi
     
-    if [ -e /sys/class/block/${PART1#/dev/}/start ]; then
-        PART1_START=$(cat /sys/class/block/${PART1#/dev/}/start)
+    if [ -e /sys/class/block/${PART3#/dev/}/start ]; then
+        PART3_START=$(cat /sys/class/block/${PART3#/dev/}/start)
     fi
     
-    if [ "$PART1_START" != "4202988" ]; then
-        vtdebug "part1 start is $PART1_START not 4202988"
+    if [ "$PART3_START" != "482799206" ]; then
+        vtdebug "part3 start is $PART3_START not 482799206"
         ventoy_false
         return
     fi 
     
     if [ "$VENTOY_SECTOR_NUM" != "$SIZE" ]; then
-        vtdebug "part2 size is $SIZE not $VENTOY_SECTOR_NUM"
+        vtdebug "part4 size is $SIZE not $VENTOY_SECTOR_NUM"
         ventoy_false
         return
     fi
@@ -185,9 +185,9 @@ check_disk_secure_boot() {
         return
     fi
     
-    PART2=$(get_disk_part_name $1 2)    
+    PART4=$(get_disk_part_name $1 4)    
     
-    vtoycli fat -s $PART2
+    vtoycli fat -s $PART4
 }
 
 get_disk_ventoy_version() {
@@ -197,11 +197,11 @@ get_disk_ventoy_version() {
         return
     fi
     
-    PART2=$(get_disk_part_name $1 2)    
+    PART4=$(get_disk_part_name $1 4)    
     
-    ParseVer=$(vtoycli fat $PART2)
+    ParseVer=$(vtoycli fat $PART4)
     if [ $? -eq 0 ]; then
-        vtdebug "Ventoy version in $PART2 is $ParseVer"
+        vtdebug "Ventoy version in $PART4 is $ParseVer"
         echo $ParseVer
         ventoy_true
         return
@@ -211,42 +211,42 @@ get_disk_ventoy_version() {
 }
 
 wait_and_create_part() {
-    vPART1=$1
-    vPART2=$2
-    echo 'Wait for partitions $vPART1 and $vPART2 ...'
+    vPART3=$1
+    vPART4=$2
+    echo 'Wait for partitions $vPART3 and $vPART4 ...'
     for i in 0 1 2 3 4 5 6 7 8 9; do
-        if ls -l $vPART1 2>/dev/null | grep -q '^b'; then
-            if ls -l $vPART2 2>/dev/null | grep -q '^b'; then
+        if ls -l $vPART3 2>/dev/null | grep -q '^b'; then
+            if ls -l $vPART4 2>/dev/null | grep -q '^b'; then
                 break
             fi
         else
-            echo "Wait for $vPART1 and $vPART2 ..."
+            echo "Wait for $vPART3 and $vPART4 ..."
             sleep 1
         fi
     done
 
-    if ls -l $vPART1 2>/dev/null | grep -q '^b'; then
-        echo "$vPART1 exist OK"
+    if ls -l $vPART3 2>/dev/null | grep -q '^b'; then
+        echo "$vPART3 exist OK"
     else
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${vPART1#/dev/}/dev)        
-        echo "mknod -m 0660 $vPART1 b $MajorMinor ..."
-        mknod -m 0660 $vPART1 b $MajorMinor
+        MajorMinor=$(sed "s/:/ /" /sys/class/block/${vPART3#/dev/}/dev)        
+        echo "mknod -m 0660 $vPART3 b $MajorMinor ..."
+        mknod -m 0660 $vPART3 b $MajorMinor
     fi
     
-    if ls -l $vPART2 2>/dev/null | grep -q '^b'; then
-        echo "$vPART2 exist OK"
+    if ls -l $vPART4 2>/dev/null | grep -q '^b'; then
+        echo "$vPART4 exist OK"
     else
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${vPART2#/dev/}/dev)        
-        echo "mknod -m 0660 $vPART2 b $MajorMinor ..."
-        mknod -m 0660 $vPART2 b $MajorMinor        
+        MajorMinor=$(sed "s/:/ /" /sys/class/block/${vPART4#/dev/}/dev)        
+        echo "mknod -m 0660 $vPART4 b $MajorMinor ..."
+        mknod -m 0660 $vPART4 b $MajorMinor        
     fi
 
-    if ls -l $vPART1 2>/dev/null | grep -q '^b'; then
-        if ls -l $vPART2 2>/dev/null | grep -q '^b'; then
+    if ls -l $vPART3 2>/dev/null | grep -q '^b'; then
+        if ls -l $vPART4 2>/dev/null | grep -q '^b'; then
             echo "partition exist OK"
         fi
     else
-        echo "[FAIL] $vPART1/$vPART2 does not exist"
+        echo "[FAIL] $vPART3/$vPART4 does not exist"
         exit 1
     fi
 }
@@ -257,12 +257,15 @@ format_ventoy_disk_mbr() {
     DISK=$2
     PARTTOOL=$3
     
-    PART1=$(get_disk_part_name $DISK 1)
-    PART2=$(get_disk_part_name $DISK 2)
+    PART3=$(get_disk_part_name $DISK 3)
+    PART4=$(get_disk_part_name $DISK 4)
     
     sector_num=$(cat /sys/block/${DISK#/dev/}/size)
     
-    part1_start_sector=2048 
+    part1_start_sector=2048
+    part3_start_sector=482799206
+    part4_start_sector=$((part3_end_sector + 1))
+    part4_end_sector=$((part4_start_sector + VENTOY_SECTOR_NUM - 1))
     
     if [ $reserve_mb -gt 0 ]; then
         reserve_sector_num=$(expr $reserve_mb \* 2048)
@@ -287,14 +290,14 @@ format_ventoy_disk_mbr() {
     vtdebug "part1_start_sector=$part1_start_sector  part1_end_sector=$part1_end_sector"
     vtdebug "part2_start_sector=$part2_start_sector  part2_end_sector=$part2_end_sector"
 
-    if [ -e $PART1 ]; then
-        echo "delete $PART1"
-        rm -f $PART1
+    if [ -e $PART3 ]; then
+        echo "delete $PART3"
+        rm -f $PART3
     fi
 
-    if [ -e $PART2 ]; then
-        echo "delete $PART2"
-        rm -f $PART2
+    if [ -e $PART4 ]; then
+        echo "delete $PART4"
+        rm -f $PART4
     fi
 
     echo ""
@@ -348,38 +351,38 @@ EOF
 
     echo 'Wait for partitions ...'
     for i in 0 1 2 3 4 5 6 7 8 9; do
-        if [ -b $PART1 -a -b $PART2 ]; then
+        if [ -b $PART3 -a -b $PART4 ]; then
             break
         else
-            echo "Wait for $PART1/$PART2 ..."
+            echo "Wait for $PART3/$PART4 ..."
             sleep 1
         fi
     done
 
-    if ! [ -b $PART1 ]; then
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART1#/dev/}/dev)        
-        echo "mknod -m 0660 $PART1 b $MajorMinor ..."
-        mknod -m 0660 $PART1 b $MajorMinor
+    if ! [ -b $PART3 ]; then
+        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART3#/dev/}/dev)        
+        echo "mknod -m 0660 $PART3 b $MajorMinor ..."
+        mknod -m 0660 $PART3 b $MajorMinor
     fi
     
-    if ! [ -b $PART2 ]; then
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART2#/dev/}/dev)        
-        echo "mknod -m 0660 $PART2 b $MajorMinor ..."
-        mknod -m 0660 $PART2 b $MajorMinor        
+    if ! [ -b $PART4 ]; then
+        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART4#/dev/}/dev)        
+        echo "mknod -m 0660 $PART4 b $MajorMinor ..."
+        mknod -m 0660 $PART4 b $MajorMinor        
     fi
 
-    if [ -b $PART1 -a -b $PART2 ]; then
+    if [ -b $PART3 -a -b $PART4 ]; then
         echo "partition exist OK"
     else
-        echo "[FAIL] $PART1/$PART2 does not exist"
+        echo "[FAIL] $PART3/$PART4 does not exist"
         exit 1
     fi
 
-    echo "create efi fat fs $PART2 ..."
+    echo "create efi fat fs $PART4 ..."
     for i in 0 1 2 3 4 5 6 7 8 9; do
-        check_umount_disk "$PART2"
+        check_umount_disk "$PART4"
 
-        if mkfs.vfat -F 16 -n VTOYEFI -s 1 $PART2; then
+        if mkfs.vfat -F 16 -n VTOYEFI -s 1 $PART4; then
             echo 'success'
             break
         else
@@ -395,12 +398,12 @@ format_ventoy_disk_gpt() {
     DISK=$2
     PARTTOOL=$3
     
-    PART1=$(get_disk_part_name $DISK 1)
-    PART2=$(get_disk_part_name $DISK 2)
+    PART3=$(get_disk_part_name $DISK 3)
+    PART4=$(get_disk_part_name $DISK 4)
     
     sector_num=$(cat /sys/block/${DISK#/dev/}/size)
     
-    part1_start_sector=2048 
+    part1_start_sector=482799206
     
     if [ $reserve_mb -gt 0 ]; then
         reserve_sector_num=$(expr $reserve_mb \* 2048 + 33)
@@ -425,14 +428,14 @@ format_ventoy_disk_gpt() {
     vtdebug "part1_start_sector=$part1_start_sector  part1_end_sector=$part1_end_sector"
     vtdebug "part2_start_sector=$part2_start_sector  part2_end_sector=$part2_end_sector"
 
-    if [ -e $PART1 ]; then
-        echo "delete $PART1"
-        rm -f $PART1
+    if [ -e $PART3 ]; then
+        echo "delete $PART3"
+        rm -f $PART3
     fi
 
-    if [ -e $PART2 ]; then
-        echo "delete $PART2"
-        rm -f $PART2
+    if [ -e $PART4 ]; then
+        echo "delete $PART4"
+        rm -f $PART4
     fi
 
     echo ""
@@ -465,39 +468,39 @@ format_ventoy_disk_gpt() {
 
     echo 'Wait for partitions ...'
     for i in 0 1 2 3 4 5 6 7 8 9; do
-        if [ -b $PART1 -a -b $PART2 ]; then
+        if [ -b $PART3 -a -b $PART4 ]; then
             break
         else
-            echo "Wait for $PART1/$PART2 ..."
+            echo "Wait for $PART3/$PART4 ..."
             sleep 1
         fi
     done
 
-    if ! [ -b $PART1 ]; then
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART1#/dev/}/dev)        
-        echo "mknod -m 0660 $PART1 b $MajorMinor ..."
-        mknod -m 0660 $PART1 b $MajorMinor
+    if ! [ -b $PART3 ]; then
+        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART3#/dev/}/dev)        
+        echo "mknod -m 0660 $PART3 b $MajorMinor ..."
+        mknod -m 0660 $PART3 b $MajorMinor
     fi
     
-    if ! [ -b $PART2 ]; then
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART2#/dev/}/dev)        
+    if ! [ -b $PART4 ]; then
+        MajorMinor=$(sed "s/:/ /" /sys/class/block/${PART4#/dev/}/dev)        
         echo "mknod -m 0660 $PART2 b $MajorMinor ..."
-        mknod -m 0660 $PART2 b $MajorMinor        
+        mknod -m 0660 $PART4 b $MajorMinor        
     fi
 
-    if [ -b $PART1 -a -b $PART2 ]; then
+    if [ -b $PART3 -a -b $PART4 ]; then
         echo "partition exist OK"
     else
-        echo "[FAIL] $PART1/$PART2 does not exist"
+        echo "[FAIL] $PART3/$PART4 does not exist"
         exit 1
     fi
 
-    echo "create efi fat fs $PART2 ..."
+    echo "create efi fat fs $PART4 ..."
     
     for i in 0 1 2 3 4 5 6 7 8 9; do
-        check_umount_disk "$PART2"
+        check_umount_disk "$PART4"
         
-        if mkfs.vfat -F 16 -n VTOYEFI -s 1 $PART2; then
+        if mkfs.vfat -F 16 -n VTOYEFI -s 1 $PART4; then
             echo 'success'
             break
         else
