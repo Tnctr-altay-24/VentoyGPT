@@ -536,7 +536,7 @@ static int vtoy_print_os_param(ventoy_os_param *param, char *diskname)
         }
         else
         {
-            snprintf(diskpath, sizeof(diskpath) - 1, "/sys/class/block/%s4/size", diskname);
+            snprintf(diskpath, sizeof(diskpath) - 1, "/sys/class/block/%s2/size", diskname);
         }
 
         if (param->vtoy_reserved[6] == 0 && access(diskpath, F_OK) >= 0)
