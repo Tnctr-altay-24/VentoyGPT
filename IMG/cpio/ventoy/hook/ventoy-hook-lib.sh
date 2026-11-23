@@ -788,7 +788,7 @@ ventoy_create_chromeos_ventoy_part() {
 }
 
 is_inotify_ventoy_part() {
-    if echo $1 | $GREP -q "3$"; then
+    if echo $1 | $GREP -q "4$"; then
         if ! [ -e /sys/block/$1 ]; then
             if [ -e /sys/class/block/$1 ]; then
                 if echo $1 | $EGREP -q "nvme|mmc|nbd"; then
