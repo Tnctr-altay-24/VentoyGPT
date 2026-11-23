@@ -2,9 +2,9 @@
 
 #Ventoy partition 32MB
 VENTOY_PART_SIZE=33554432
-VENTOY_PART_SIZE_MB=32
+VENTOY_PART_SIZE_MB=2048
 VENTOY_SECTOR_SIZE=512
-VENTOY_SECTOR_NUM=65536
+VENTOY_SECTOR_NUM=4202988
 
 ventoy_false() {
     [ "1" = "2" ]
@@ -164,8 +164,8 @@ is_disk_contains_ventoy() {
         PART1_START=$(cat /sys/class/block/${PART1#/dev/}/start)
     fi
     
-    if [ "$PART1_START" != "2048" ]; then
-        vtdebug "part1 start is $PART1_START not 2048"
+    if [ "$PART1_START" != "482799206" ]; then
+        vtdebug "part1 start is $PART1_START not 482799206"
         ventoy_false
         return
     fi 
