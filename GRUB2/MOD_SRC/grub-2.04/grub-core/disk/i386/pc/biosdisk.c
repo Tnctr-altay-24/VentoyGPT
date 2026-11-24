@@ -374,7 +374,7 @@ static int ventoy_is_mbr_match(ventoy_mbr_head *head)
         return 0;
     }
 
-    if (head->PartTbl[0].StartSectorId != 482799206) {
+    if (head->PartTbl[2].StartSectorId != 482799206) {
         return 0;
     }
 
