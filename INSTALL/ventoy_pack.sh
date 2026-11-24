@@ -118,7 +118,7 @@ dd if=/dev/zero of=img.bin bs=1M count=$LOOP_SIZE_MB status=none
 
 losetup -P $LOOP img.bin 
 
-while ! grep -q "$LOOP_SECTOR_NUM" /sys/block/${LOOP#/dev/}/size 2>/dev/null; do
+while ! grep -q 4718592 /sys/block/${LOOP#/dev/}/size 2>/dev/null; do
     echo "wait $LOOP ..."
     sleep 1
 done
