@@ -1,10 +1,15 @@
 #!/bin/sh
 
 #Ventoy partition 32MB
-VENTOY_PART_SIZE=33554432
-VENTOY_PART_SIZE_MB=32
+VENTOY_PART_SIZE=2149370112
+VENTOY_PART_SIZE_MB=2048
 VENTOY_SECTOR_SIZE=512
-VENTOY_SECTOR_NUM=65536
+
+# Ventoy partition start LBA
+VENTOY_PART_START=482799206
+
+# VTOYEFI partition size
+VTOYEFI_SECTOR_NUM=4202988
 
 ventoy_false() {
     [ "1" = "2" ]
@@ -33,11 +38,11 @@ vtdebug() {
 }
 
 vtoy_gen_uuid() {
-    if  uuid -F BIN > /dev/null 2>&1; then
+    if uuid -F BIN > /dev/null 2>&1; then
         uuid -F BIN
     elif uuidgen -V > /dev/null 2>&1; then
         a=$(uuidgen | sed 's/-//g')
-        echo -en "\x${a:0:2}\x${a:2:2}\x${a:4:2}\x${a:6:2}\x${a:8:2}\x${a:10:2}\x${a:12:2}\x${a:14:2}\x${a:16:2}\x${a:18:2}\x${a:20:2}\x${a:22:2}\x${a:24:2}\x${a:26:2}\x${a:28:2}\x${a:30:2}"        
+        echo -en "\x${a:0:2}\x${a:2:2}\x${a:4:2}\x${a:6:2}\x${a:8:2}\x${a:10:2}\x${a:12:2}\x${a:14:2}\x${a:16:2}\x${a:18:2}\x${a:20:2}\x${a:22:2}\x${a:24:2}\x${a:26:2}\x${a:28:2}\x${a:30:2}"
     elif python -V > /dev/null 2>&1; then
         a=$(python -c 'import sys,uuid; sys.stdout.write(uuid.uuid4().hex)')
         echo -en "\x${a:0:2}\x${a:2:2}\x${a:4:2}\x${a:6:2}\x${a:8:2}\x${a:10:2}\x${a:12:2}\x${a:14:2}\x${a:16:2}\x${a:18:2}\x${a:20:2}\x${a:22:2}\x${a:24:2}\x${a:26:2}\x${a:28:2}\x${a:30:2}"
@@ -51,7 +56,7 @@ vtoy_gen_uuid() {
 }
 
 check_tool_work_ok() {
-    
+
     if echo 1 | hexdump > /dev/null; then
         vtdebug "hexdump test ok ..."
     else
@@ -59,15 +64,15 @@ check_tool_work_ok() {
         ventoy_false
         return
     fi
-   
-    if mkexfatfs -V > /dev/null; then        
+
+    if mkexfatfs -V > /dev/null; then
         vtdebug "mkexfatfs test ok ..."
     else
         vtdebug "mkexfatfs test fail ..."
         ventoy_false
         return
     fi
-    
+
     if vtoycli fat -T; then
         vtdebug "vtoycli fat test ok ..."
     else
@@ -75,7 +80,7 @@ check_tool_work_ok() {
         ventoy_false
         return
     fi
-    
+
     vtdebug "tool check success ..."
     ventoy_true
 }
@@ -83,18 +88,18 @@ check_tool_work_ok() {
 
 get_disk_part_name() {
     DISK=$1
-    
-    if echo $DISK | grep -q "/dev/loop"; then
+
+    if echo "$DISK" | grep -q "/dev/loop"; then
         echo ${DISK}p${2}
-    elif echo $DISK | grep -q "/dev/nvme[0-9][0-9]*n[0-9]"; then
+    elif echo "$DISK" | grep -q "/dev/nvme[0-9][0-9]*n[0-9]"; then
         echo ${DISK}p${2}
-    elif echo $DISK | grep -q "/dev/mmcblk[0-9]"; then
+    elif echo "$DISK" | grep -q "/dev/mmcblk[0-9]"; then
         echo ${DISK}p${2}
-    elif echo $DISK | grep -q "/dev/nbd[0-9]"; then
+    elif echo "$DISK" | grep -q "/dev/nbd[0-9]"; then
         echo ${DISK}p${2}
-    elif echo $DISK | grep -q "/dev/zd[0-9]"; then
+    elif echo "$DISK" | grep -q "/dev/zd[0-9]"; then
         echo ${DISK}p${2}
-    elif echo $DISK | grep -q "/dev/md[0-9]"; then
+    elif echo "$DISK" | grep -q "/dev/md[0-9]"; then
         echo ${DISK}p${2}
     else
         echo ${DISK}${2}
@@ -119,138 +124,180 @@ get_ventoy_version_from_cfg() {
 }
 
 is_disk_contains_ventoy() {
-    DISK=$1    
-    
-    PART1=$(get_disk_part_name $1 1)  
-    PART2=$(get_disk_part_name $1 2)  
-    
-    if [ -e /sys/class/block/${PART2#/dev/}/size ]; then    
-        SIZE=$(cat /sys/class/block/${PART2#/dev/}/size)
-    else
-        SIZE=0
+    DISK=$1
+
+    # GPT3 = Ventoy ISO partition
+    # GPT4 = VTOYEFI partition
+
+    PART3=$(get_disk_part_name "$DISK" 3)
+    PART4=$(get_disk_part_name "$DISK" 4)
+
+    # Check PART3 exists
+    if ! [ -b "$PART3" ]; then
+        vtdebug "$PART3 not exist"
+        ventoy_false
+        return
     fi
 
-    if ! [ -b $PART1 ]; then
-        vtdebug "$PART1 not exist"
+    # Check PART4 exists
+    if ! [ -b "$PART4" ]; then
+        vtdebug "$PART4 not exist"
         ventoy_false
         return
     fi
-    
-    if ! [ -b $PART2 ]; then
-        vtdebug "$PART2 not exist"
+
+    # Read Ventoy partition start LBA
+    if [ -e /sys/class/block/${PART3#/dev/}/start ]; then
+        PART3_START=$(cat /sys/class/block/${PART3#/dev/}/start)
+    else
+        vtdebug "PART3 start information not found"
         ventoy_false
         return
     fi
-    
-    PART1_TYPE=$(dd if=$DISK bs=1 count=1 skip=450 status=none | hexdump -n1 -e  '1/1 "%02X"')
-    PART2_TYPE=$(dd if=$DISK bs=1 count=1 skip=466 status=none | hexdump -n1 -e  '1/1 "%02X"')
-    
-    # if [ "$PART1_TYPE" != "EE" ]; then
-        # if [ "$PART2_TYPE" != "EF" ]; then
-            # vtdebug "part2 type is $PART2_TYPE not EF"
-            # ventoy_false
-            # return
-        # fi
-    # fi
-    
-    # PART1_TYPE=$(dd if=$DISK bs=1 count=1 skip=450 status=none | hexdump -n1 -e  '1/1 "%02X"')
-    # if [ "$PART1_TYPE" != "07" ]; then
-        # vtdebug "part1 type is $PART2_TYPE not 07"
-        # ventoy_false
-        # return
-    # fi
-    
-    if [ -e /sys/class/block/${PART1#/dev/}/start ]; then
-        PART1_START=$(cat /sys/class/block/${PART1#/dev/}/start)
-    fi
-    
-    if [ "$PART1_START" != "2048" ]; then
-        vtdebug "part1 start is $PART1_START not 2048"
-        ventoy_false
-        return
-    fi 
-    
-    if [ "$VENTOY_SECTOR_NUM" != "$SIZE" ]; then
-        vtdebug "part2 size is $SIZE not $VENTOY_SECTOR_NUM"
+
+    # Read Ventoy partition size
+    if [ -e /sys/class/block/${PART3#/dev/}/size ]; then
+        PART3_SIZE=$(cat /sys/class/block/${PART3#/dev/}/size)
+    else
+        vtdebug "PART3 size information not found"
         ventoy_false
         return
     fi
-    
+
+    # Read VTOYEFI partition start
+    if [ -e /sys/class/block/${PART4#/dev/}/start ]; then
+        PART4_START=$(cat /sys/class/block/${PART4#/dev/}/start)
+    else
+        vtdebug "PART4 start information not found"
+        ventoy_false
+        return
+    fi
+
+    # Read VTOYEFI partition size
+    if [ -e /sys/class/block/${PART4#/dev/}/size ]; then
+        PART4_SIZE=$(cat /sys/class/block/${PART4#/dev/}/size)
+    else
+        vtdebug "PART4 size information not found"
+        ventoy_false
+        return
+    fi
+
+    # Check Ventoy partition start
+    if [ "$PART3_START" != "$VENTOY_PART_START" ]; then
+        vtdebug "PART3 start is $PART3_START not $VENTOY_PART_START"
+        ventoy_false
+        return
+    fi
+
+    # Check VTOYEFI partition size
+    if [ "$PART4_SIZE" != "$VTOYEFI_SECTOR_NUM" ]; then
+        vtdebug "PART4 size is $PART4_SIZE not $VTOYEFI_SECTOR_NUM"
+        ventoy_false
+        return
+    fi
+
+    # Check partition continuity
+    EXPECTED_PART4_START=$((PART3_START + PART3_SIZE))
+
+    if [ "$PART4_START" != "$EXPECTED_PART4_START" ]; then
+        vtdebug "PART4 start is $PART4_START not $EXPECTED_PART4_START"
+        ventoy_false
+        return
+    fi
+
+    vtdebug "Ventoy GPT partition layout check success"
+
     ventoy_true
 }
 
 check_disk_secure_boot() {
-    if ! is_disk_contains_ventoy $1; then
+    if ! is_disk_contains_ventoy "$1"; then
         ventoy_false
         return
     fi
-    
-    PART2=$(get_disk_part_name $1 2)    
-    
-    vtoycli fat -s $PART2
+
+    # VTOYEFI = GPT4
+    PART4=$(get_disk_part_name "$1" 4)
+
+    vtoycli fat -s "$PART4"
 }
+
+
+check_disk_secure_boot() {
+
+    if ! is_disk_contains_ventoy "$1"; then
+        ventoy_false
+        return
+    fi
+
+    PART4=$(get_disk_part_name "$1" 4)
+
+    vtoycli fat -s "$PART4"
+}
+
 
 get_disk_ventoy_version() {
 
-    if ! is_disk_contains_ventoy $1; then
+    if ! is_disk_contains_ventoy "$1"; then
         ventoy_false
         return
     fi
-    
-    PART2=$(get_disk_part_name $1 2)    
-    
-    ParseVer=$(vtoycli fat $PART2)
+
+    # Ventoy ISO partition = GPT3
+    PART3=$(get_disk_part_name "$1" 3)
+
+    ParseVer=$(vtoycli fat "$PART3")
+
     if [ $? -eq 0 ]; then
-        vtdebug "Ventoy version in $PART2 is $ParseVer"
-        echo $ParseVer
+        vtdebug "Ventoy version in $PART3 is $ParseVer"
+        echo "$ParseVer"
         ventoy_true
         return
     fi
-    
+
     ventoy_false
 }
 
 wait_and_create_part() {
     vPART1=$1
     vPART2=$2
-    echo 'Wait for partitions $vPART1 and $vPART2 ...'
+
+    echo "Wait for partitions $vPART1 and $vPART2 ..."
+
     for i in 0 1 2 3 4 5 6 7 8 9; do
-        if ls -l $vPART1 2>/dev/null | grep -q '^b'; then
-            if ls -l $vPART2 2>/dev/null | grep -q '^b'; then
-                break
-            fi
+        if [ -b "$vPART1" ] && [ -b "$vPART2" ]; then
+            break
+        fi
+
+        echo "Wait for $vPART1 and $vPART2 ..."
+        sleep 1
+    done
+
+    for PART in "$vPART1" "$vPART2"; do
+        if [ -b "$PART" ]; then
+            echo "$PART exist OK"
         else
-            echo "Wait for $vPART1 and $vPART2 ..."
-            sleep 1
+            SYSDEV="/sys/class/block/${PART#/dev/}"
+
+            if [ ! -e "$SYSDEV/dev" ]; then
+                echo "[FAIL] $PART device information not found"
+                exit 1
+            fi
+
+            MajorMinor=$(sed "s/:/ /" "$SYSDEV/dev")
+
+            echo "mknod -m 0660 $PART b $MajorMinor ..."
+            mknod -m 0660 "$PART" b $MajorMinor
         fi
     done
 
-    if ls -l $vPART1 2>/dev/null | grep -q '^b'; then
-        echo "$vPART1 exist OK"
-    else
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${vPART1#/dev/}/dev)        
-        echo "mknod -m 0660 $vPART1 b $MajorMinor ..."
-        mknod -m 0660 $vPART1 b $MajorMinor
-    fi
-    
-    if ls -l $vPART2 2>/dev/null | grep -q '^b'; then
-        echo "$vPART2 exist OK"
-    else
-        MajorMinor=$(sed "s/:/ /" /sys/class/block/${vPART2#/dev/}/dev)        
-        echo "mknod -m 0660 $vPART2 b $MajorMinor ..."
-        mknod -m 0660 $vPART2 b $MajorMinor        
-    fi
-
-    if ls -l $vPART1 2>/dev/null | grep -q '^b'; then
-        if ls -l $vPART2 2>/dev/null | grep -q '^b'; then
-            echo "partition exist OK"
-        fi
+    if [ -b "$vPART1" ] && [ -b "$vPART2" ]; then
+        echo "partition exist OK"
     else
         echo "[FAIL] $vPART1/$vPART2 does not exist"
         exit 1
     fi
 }
-
 
 format_ventoy_disk_mbr() {
     reserve_mb=$1
