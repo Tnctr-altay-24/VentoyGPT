@@ -581,7 +581,7 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
             CompareMem(g_chain->os_param.vtoy_disk_signature, pBuffer + 0x1b8, 4) == 0)
         {
             pMBR = (MBR_HEAD *)pBuffer;
-            if (g_os_param_reserved[6] == 0 && pMBR->PartTbl[0].FsFlag != 0xEE)
+            if (g_os_param_reserved[6] == 0 && pMBR->PartTbl[2].FsFlag != 0xEE)
             {
                 if (pMBR->PartTbl[2].StartSectorId != 482799206 ||
                     pMBR->PartTbl[3].SectorCount != 4202988 ||
