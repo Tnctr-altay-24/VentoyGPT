@@ -111,14 +111,11 @@ cd -
 LOOP=$(losetup -f)
 
 rm -f img.bin
-LOOP_SIZE_MB=2304
-LOOP_SECTOR_NUM=$((LOOP_SIZE_MB * 2048))
-
-dd if=/dev/zero of=img.bin bs=1M count=$LOOP_SIZE_MB status=none
+dd if=/dev/zero of=img.bin bs=1M count=256 status=none
 
 losetup -P $LOOP img.bin 
 
-while ! grep -q 4718592 /sys/block/${LOOP#/dev/}/size 2>/dev/null; do
+while ! grep -q 524288 /sys/block/${LOOP#/dev/}/size 2>/dev/null; do
     echo "wait $LOOP ..."
     sleep 1
 done
