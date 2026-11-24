@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#Ventoy partition 32MB
+#Ventoy partition 2052MB
 VENTOY_PART_SIZE=2151929856
 VENTOY_PART_SIZE_MB=2052
 VENTOY_SECTOR_SIZE=512
