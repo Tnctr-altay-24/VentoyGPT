@@ -203,20 +203,20 @@ static int part_check(const char *disk)
 			goto out;
 		}
 
-		if (memcmp(&(PartTbl[0].PartGuid), &g_ZeroGuid, sizeof(GUID)))
+		if (memcmp(&(PartTbl[2].PartGuid), &g_ZeroGuid, sizeof(GUID)))
 		{
-			Part1Start = PartTbl[0].StartLBA;
-			Part1End = PartTbl[0].LastLBA + 1;
+			Part1Start = PartTbl[2].StartLBA;
+			Part1End = PartTbl[2].LastLBA + 1;
 		}
 		else
 		{
-			printf("###[FAIL] GPT Partition 1 is invalid\n");
+			printf("###[FAIL] GPT Partition 3 is invalid\n");
 			goto out;
 		}
 
 		Index = -1;
 		NextPartStart = (pGPT->Head.PartAreaEndLBA + 1);
-		for (i = 1; i < 128; i++)
+		for (i = 3; i < 128; i++)
 		{
 			if (memcmp(&(PartTbl[i].PartGuid), &g_ZeroGuid, sizeof(GUID)) && NextPartStart > PartTbl[i].StartLBA)
 			{
@@ -528,7 +528,7 @@ static int update_part_table(char *disk, UINT64 part2start)
     {
 		PART_TABLE *PartTbl = pGPT->MBR.PartTbl;
 
-        for (i = 1; i < 4; i++)
+        for (i = 3; i < 4; i++)
         {
             if (PartTbl[i].SectorCount == 0)
             {
@@ -542,19 +542,19 @@ static int update_part_table(char *disk, UINT64 part2start)
 			goto out;
 		}
 
-        for (j = i - 1; j > 0; j--)
+        for (j = i - 1; j > 2; j--)
 		{
 			printf("Move MBR partition table %d --> %d\n", j + 1, j + 2);
 			memcpy(PartTbl + (j + 1), PartTbl + j, sizeof(PART_TABLE));
 		}
 
-        memset(PartTbl + 1, 0, sizeof(PART_TABLE));
-        VentoyFillMBRLocation(DiskSizeInBytes, (UINT32)part2start, VENTOY_EFI_PART_SIZE / 512, PartTbl + 1);
-		PartTbl[1].Active = 0x00;
-		PartTbl[1].FsFlag = 0xEF; // EFI System Partition
+        memset(PartTbl + 3, 0, sizeof(PART_TABLE));
+        VentoyFillMBRLocation(DiskSizeInBytes, (UINT32)part2start, VENTOY_EFI_PART_SIZE / 512, PartTbl + 3);
+		PartTbl[3].Active = 0x00;
+		PartTbl[3].FsFlag = 0xEF; // EFI System Partition
 
-        PartTbl[0].Active = 0x80; // bootable
-        PartTbl[0].SectorCount = (UINT32)part2start - 2048;
+        PartTbl[2].Active = 0x80; // bootable
+        PartTbl[2].SectorCount = (UINT32)part2start - 482799206;
         
         if (!WriteDataToPhyDisk(fd, 0, &(pGPT->MBR), 512))
 		{
@@ -570,7 +570,7 @@ static int update_part_table(char *disk, UINT64 part2start)
     {
 		VTOY_GPT_PART_TBL *PartTbl = pGPT->PartTbl;
 
-        for (i = 1; i < 128; i++)
+        for (i = 3; i < 128; i++)
         {
             if (memcmp(&(PartTbl[i].PartGuid), &g_ZeroGuid, sizeof(GUID)) == 0)
             {
@@ -584,30 +584,30 @@ static int update_part_table(char *disk, UINT64 part2start)
 			goto out;
 		}
 
-		for (j = i - 1; j > 0; j--)
+		for (j = i - 1; j > 2; j--)
 		{
-			printf("Move GPT partition table %d --> %d\n", j + 1, j + 2);
-			memcpy(PartTbl + (j + 1), PartTbl + j, sizeof(VTOY_GPT_PART_TBL));
+    		printf("Move GPT partition table %d --> %d\n", j + 1, j + 2);
+    		memcpy(PartTbl + (j + 1), PartTbl + j, sizeof(VTOY_GPT_PART_TBL));
 		}
 
         // to fix windows issue
-        memset(PartTbl + 1, 0, sizeof(VTOY_GPT_PART_TBL));
-		memcpy(&(PartTbl[1].PartType), &g_WindowsDataPartGuid, sizeof(GUID));
-		ventoy_gen_preudo_uuid(&(PartTbl[1].PartGuid));
+        memset(PartTbl + 3, 0, sizeof(VTOY_GPT_PART_TBL));
+		memcpy(&(PartTbl[3].PartType), &g_WindowsDataPartGuid, sizeof(GUID));
+		ventoy_gen_preudo_uuid(&(PartTbl[3].PartGuid));
 
-        PartTbl[0].LastLBA = part2start - 1;
+        PartTbl[2].LastLBA = part2start - 1;
 
-        PartTbl[1].StartLBA = PartTbl[0].LastLBA + 1;
-		PartTbl[1].LastLBA = PartTbl[1].StartLBA + VENTOY_EFI_PART_SIZE / 512 - 1;
-		PartTbl[1].Attr = VENTOY_EFI_PART_ATTR;
-        PartTbl[1].Name[0] = 'V';
-        PartTbl[1].Name[1] = 'T';
-        PartTbl[1].Name[2] = 'O';
-        PartTbl[1].Name[3] = 'Y';
-        PartTbl[1].Name[4] = 'E';
-        PartTbl[1].Name[5] = 'F';
-        PartTbl[1].Name[6] = 'I';
-        PartTbl[1].Name[7] = 0;
+        PartTbl[3].StartLBA = PartTbl[2].LastLBA + 1;
+		PartTbl[3].LastLBA = PartTbl[3].StartLBA + VENTOY_EFI_PART_SIZE / 512 - 1;
+		PartTbl[3].Attr = VENTOY_EFI_PART_ATTR;
+        PartTbl[3].Name[0] = 'V';
+        PartTbl[3].Name[1] = 'T';
+        PartTbl[3].Name[2] = 'O';
+        PartTbl[3].Name[3] = 'Y';
+        PartTbl[3].Name[4] = 'E';
+        PartTbl[3].Name[5] = 'F';
+        PartTbl[3].Name[6] = 'I';
+        PartTbl[3].Name[7] = 0;
 
 		//Update CRC
 		pGPT->Head.PartTblCrc = VtoyCrc32(pGPT->PartTbl, sizeof(pGPT->PartTbl));
