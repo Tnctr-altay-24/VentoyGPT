@@ -362,29 +362,37 @@ grub_biosdisk_rw (int cmd, grub_disk_t disk,
 		  grub_disk_addr_t sector, grub_size_t size,
 		  unsigned segment);
 
+
 static int ventoy_is_mbr_match(ventoy_mbr_head *head)
 {
-    grub_uint32_t PartStartSector;
-    
-    if (head->Byte55 != 0x55 || head->ByteAA != 0xAA) {
-        return 0;
-    }
-    
-    if (head->PartTbl[2].SectorCount > 0 || head->PartTbl[3].SectorCount > 0) {
+    grub_uint64_t PartStartSector;
+
+    if (head->Byte55 != 0x55 || head->ByteAA != 0xAA)
+    {
         return 0;
     }
 
-    if (head->PartTbl[2].StartSectorId != 482799206) {
+    /* MBR3 = Ventoy ISO */
+    if (head->PartTbl[2].StartSectorId != 482799206 ||
+        head->PartTbl[2].SectorCount == 0)
+    {
         return 0;
     }
 
-    if (head->PartTbl[3].Active != 0x80 || head->PartTbl[3].FsFlag != 0xEF) {
+    /* MBR4 = VTOYEFI */
+    if (head->PartTbl[3].FsFlag != 0xEF ||
+        head->PartTbl[3].Active != 0x00)
+    {
         return 0;
     }
 
-    PartStartSector = head->PartTbl[2].StartSectorId + head->PartTbl[2].SectorCount;
+    PartStartSector =
+        (grub_uint64_t)head->PartTbl[2].StartSectorId +
+        head->PartTbl[2].SectorCount;
 
-    if (head->PartTbl[3].StartSectorId != PartStartSector || head->PartTbl[3].SectorCount != 4202988) {
+    if (head->PartTbl[3].StartSectorId != PartStartSector ||
+        head->PartTbl[3].SectorCount != 65536)
+    {
         return 0;
     }
 
@@ -508,7 +516,7 @@ grub_biosdisk_open (const char *name, grub_disk_t disk)
     if (grub_biosdisk_rw(0, disk, 0, 1, GRUB_MEMORY_MACHINE_SCRATCH_SEG) == 0) {
         ventoy_mbr_head *mbr = (ventoy_mbr_head *)GRUB_MEMORY_MACHINE_SCRATCH_ADDR;
         if (ventoy_is_mbr_match(mbr)) {
-            total_sectors = mbr->PartTbl[1].StartSectorId + mbr->PartTbl[1].SectorCount + 1;
+            total_sectors = mbr->PartTbl[3].StartSectorId + mbr->PartTbl[3].SectorCount + 1;
             if (disk->total_sectors < total_sectors) {
                 disk->total_sectors = total_sectors;
             }
