@@ -445,9 +445,9 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
     uint64_t part2_sector_count;
     uint64_t preserved_space;
     char name[64] = {0};
-    disk_ventoy_data *vtoy = NULL;    
+    disk_ventoy_data *vtoy = NULL;
     VTOY_GPT_INFO *gpt = NULL;
-    
+
     vtoy = &(info->vtoydata);
     gpt = &(vtoy->gptinfo);
     memset(vtoy, 0, sizeof(disk_ventoy_data));
@@ -456,7 +456,8 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
 
     if (info->size_in_byte < (2 * VTOYEFI_PART_BYTES))
     {
-        vdebug("disk %s is too small %llu\n", info->disk_path, (_ull)info->size_in_byte);
+        vdebug("disk %s is too small %llu\n",
+            info->disk_path, (_ull)info->size_in_byte);
         return 1;
     }
 
@@ -476,70 +477,88 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
 
     if (gpt->MBR.Byte55 != 0x55 || gpt->MBR.ByteAA != 0xAA)
     {
-        vdebug("Invalid mbr magic 0x%x 0x%x\n", gpt->MBR.Byte55, gpt->MBR.ByteAA);
+        vdebug("Invalid mbr magic 0x%x 0x%x\n",
+            gpt->MBR.Byte55, gpt->MBR.ByteAA);
         goto end;
     }
 
-    if (gpt->MBR.PartTbl[0].FsFlag == 0xEE && strncmp(gpt->Head.Signature, "EFI PART", 8) == 0)
+    if (gpt->MBR.PartTbl[0].FsFlag == 0xEE &&
+        strncmp(gpt->Head.Signature, "EFI PART", 8) == 0)
     {
         part_style = GPT_PART_STYLE;
+
         if (ppartstyle)
         {
             *ppartstyle = part_style;
         }
 
-        if (gpt->PartTbl[0].StartLBA == 0 || gpt->PartTbl[1].StartLBA == 0)
+        /* GPT3 = Ventoy ISO, GPT4 = VTOYEFI */
+        if (gpt->PartTbl[2].StartLBA == 0 ||
+            gpt->PartTbl[3].StartLBA == 0)
         {
-            vdebug("NO ventoy efi part layout <%llu %llu>\n", 
-                (_ull)gpt->PartTbl[0].StartLBA,
-                (_ull)gpt->PartTbl[1].StartLBA);
+            vdebug("NO ventoy efi part layout <%llu %llu>\n",
+                (_ull)gpt->PartTbl[2].StartLBA,
+                (_ull)gpt->PartTbl[3].StartLBA);
             goto end;
         }
 
         for (i = 0; i < 36; i++)
         {
-            name[i] = (char)(gpt->PartTbl[1].Name[i]);
+            name[i] = (char)(gpt->PartTbl[3].Name[i]);
         }
+
         if (strcmp(name, "VTOYEFI"))
         {
-            vdebug("Invalid efi part2 name <%s>\n", name);
+            vdebug("Invalid efi part4 name <%s>\n", name);
             goto end;
         }
 
-        part1_start_sector = gpt->PartTbl[0].StartLBA;
-        part1_sector_count = gpt->PartTbl[0].LastLBA - part1_start_sector + 1;
-        part2_start_sector = gpt->PartTbl[1].StartLBA;
-        part2_sector_count = gpt->PartTbl[1].LastLBA - part2_start_sector + 1;
+        part1_start_sector = gpt->PartTbl[2].StartLBA;
+        part1_sector_count =
+            gpt->PartTbl[2].LastLBA - part1_start_sector + 1;
 
-        preserved_space = info->size_in_byte - (part2_start_sector + part2_sector_count + 33) * 512;
+        part2_start_sector = gpt->PartTbl[3].StartLBA;
+        part2_sector_count =
+            gpt->PartTbl[3].LastLBA - part2_start_sector + 1;
+
+        preserved_space =
+            info->size_in_byte -
+            (part2_start_sector + part2_sector_count + 33) * 512;
     }
     else
     {
         part_style = MBR_PART_STYLE;
+
         if (ppartstyle)
         {
             *ppartstyle = part_style;
         }
-        
-        part1_start_sector = gpt->MBR.PartTbl[0].StartSectorId;
-        part1_sector_count = gpt->MBR.PartTbl[0].SectorCount;
-        part2_start_sector = gpt->MBR.PartTbl[1].StartSectorId;
-        part2_sector_count = gpt->MBR.PartTbl[1].SectorCount;
 
-        preserved_space = info->size_in_byte - (part2_start_sector + part2_sector_count) * 512;
+        /* MBR3 = Ventoy ISO, MBR4 = VTOYEFI */
+        part1_start_sector = gpt->MBR.PartTbl[2].StartSectorId;
+        part1_sector_count = gpt->MBR.PartTbl[2].SectorCount;
+
+        part2_start_sector = gpt->MBR.PartTbl[3].StartSectorId;
+        part2_sector_count = gpt->MBR.PartTbl[3].SectorCount;
+
+        preserved_space =
+            info->size_in_byte -
+            (part2_start_sector + part2_sector_count) * 512;
     }
 
     if (part1_start_sector != VTOYIMG_PART_START_SECTOR ||
         part2_sector_count != VTOYEFI_PART_SECTORS ||
         (part1_start_sector + part1_sector_count) != part2_start_sector)
     {
-        vdebug("Not valid ventoy partition layout [%llu %llu] [%llu %llu]\n", 
-               part1_start_sector, part1_sector_count, part2_start_sector, part2_sector_count);
+        vdebug("Not valid ventoy partition layout [%llu %llu] [%llu %llu]\n",
+            part1_start_sector, part1_sector_count,
+            part2_start_sector, part2_sector_count);
         goto end;
     }
 
-    vdebug("ventoy partition layout check OK: [%llu %llu] [%llu %llu]\n", 
-               part1_start_sector, part1_sector_count, part2_start_sector, part2_sector_count);
+    vdebug("ventoy partition layout check OK: [%llu %llu] [%llu %llu]\n",
+        part1_start_sector, part1_sector_count,
+        part2_start_sector, part2_sector_count);
 
     vtoy->ventoy_valid = 1;
 
@@ -551,10 +570,12 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
 
     if (0 == fl_attach_media(fatlib_media_sector_read, NULL))
     {
-        ret = fatlib_get_ventoy_version(vtoy->ventoy_ver, sizeof(vtoy->ventoy_ver));
+        ret = fatlib_get_ventoy_version(vtoy->ventoy_ver,
+            sizeof(vtoy->ventoy_ver));
+
         if (ret == 0 && vtoy->ventoy_ver[0])
         {
-            vtoy->secure_boot_flag = fatlib_is_secure_boot_enable();            
+            vtoy->secure_boot_flag = fatlib_is_secure_boot_enable();
         }
         else
         {
@@ -579,7 +600,7 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
     {
         goto end;
     }
-    
+
     lseek(fd, 2040 * 512, SEEK_SET);
     read(fd, vtoy->rsvdata, sizeof(vtoy->rsvdata));
 
@@ -588,10 +609,12 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
     vtoy->part2_start_sector = part2_start_sector;
 
     rc = 0;
+
 end:
     vtoy_safe_close_fd(fd);
     return rc;
 }
+
 
 int ventoy_get_disk_info(const char *name, ventoy_disk *info)
 {
@@ -603,21 +626,23 @@ int ventoy_get_disk_info(const char *name, ventoy_disk *info)
     strlcpy(info->disk_name, name);
     scnprintf(info->disk_path, "/dev/%s", name);
 
-    if (strstr(name, "nvme") || strstr(name, "mmc") || strstr(name, "nbd"))
+    if (strstr(name, "nvme") ||
+        strstr(name, "mmc") ||
+        strstr(name, "nbd"))
     {
-        scnprintf(info->part1_name, "%sp1", name);
-        scnprintf(info->part1_path, "/dev/%sp1", name);
-        scnprintf(info->part2_name, "%sp2", name);
-        scnprintf(info->part2_path, "/dev/%sp2", name);
+        scnprintf(info->part1_name, "%sp3", name);
+        scnprintf(info->part1_path, "/dev/%sp3", name);
+        scnprintf(info->part2_name, "%sp4", name);
+        scnprintf(info->part2_path, "/dev/%sp4", name);
     }
     else
     {
-        scnprintf(info->part1_name, "%s1", name);
-        scnprintf(info->part1_path, "/dev/%s1", name);
-        scnprintf(info->part2_name, "%s2", name);
-        scnprintf(info->part2_path, "/dev/%s2", name);
+        scnprintf(info->part1_name, "%s3", name);
+        scnprintf(info->part1_path, "/dev/%s3", name);
+        scnprintf(info->part2_name, "%s4", name);
+        scnprintf(info->part2_path, "/dev/%s4", name);
     }
-    
+
     info->is4kn = ventoy_is_disk_4k_native(name);
     info->size_in_byte = ventoy_get_disk_size_in_byte(name);
 
@@ -626,19 +651,27 @@ int ventoy_get_disk_info(const char *name, ventoy_disk *info)
     ventoy_get_disk_vendor(name, vendor, sizeof(vendor));
     ventoy_get_disk_model(name, model, sizeof(model));
 
-    scnprintf(info->human_readable_size, "%llu GB", (_ull)ventoy_get_human_readable_gb(info->size_in_byte));
-    scnprintf(info->disk_model, "%s %s (%s)", vendor, model, ventoy_get_dev_type_name(info->type));
+    scnprintf(info->human_readable_size, "%llu GB",
+        (_ull)ventoy_get_human_readable_gb(info->size_in_byte));
+
+    scnprintf(info->disk_model, "%s %s (%s)",
+        vendor, model, ventoy_get_dev_type_name(info->type));
 
     ventoy_get_vtoy_data(info, &(info->partstyle));
-    
-    vdebug("disk:<%s %d:%d> model:<%s> size:%llu (%s)\n", 
-        info->disk_path, info->major, info->minor, info->disk_model, info->size_in_byte, info->human_readable_size);
+
+    vdebug("disk:<%s %d:%d> model:<%s> size:%llu (%s)\n",
+        info->disk_path, info->major, info->minor,
+        info->disk_model, info->size_in_byte,
+        info->human_readable_size);
 
     if (info->vtoydata.ventoy_valid)
     {
-        vdebug("%s Ventoy:<%s> %s secureboot:%d preserve:%llu\n", info->disk_path, info->vtoydata.ventoy_ver, 
+        vdebug("%s Ventoy:<%s> %s secureboot:%d preserve:%llu\n",
+            info->disk_path,
+            info->vtoydata.ventoy_ver,
             info->vtoydata.partition_style == MBR_PART_STYLE ? "MBR" : "GPT",
-            info->vtoydata.secure_boot_flag, (_ull)(info->vtoydata.preserved_space));
+            info->vtoydata.secure_boot_flag,
+            (_ull)(info->vtoydata.preserved_space));
     }
     else
     {
