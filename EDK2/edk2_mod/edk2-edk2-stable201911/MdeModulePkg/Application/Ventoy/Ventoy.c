@@ -587,6 +587,12 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
                     pMBR->PartTbl[3].SectorCount != 4202988 ||
                     pMBR->PartTbl[3].StartSectorId != pMBR->PartTbl[2].StartSectorId + pMBR->PartTbl[2].SectorCount)
                 {
+                    debug("========== MBR DEBUG ==========\n");
+                    debug("MBR3 Start: %u\n", pMBR->PartTbl[2].StartSectorId);
+                    debug("MBR3 Count: %u\n", pMBR->PartTbl[2].SectorCount);
+                    debug("MBR4 Start: %u\n", pMBR->PartTbl[3].StartSectorId);
+                    debug("MBR4 Count: %u\n", pMBR->PartTbl[3].SectorCount);
+                    debug("MBR4 Type: 0x%x\n", pMBR->PartTbl[3].FsFlag);
                     debug("Failed to check disk part table");
                     ventoy_warn_invalid_device();
                 }
