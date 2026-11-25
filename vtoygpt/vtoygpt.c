@@ -288,17 +288,17 @@ int main(int argc, const char **argv)
         lseek(fd, DiskSize - 33 * 512, SEEK_SET);
         read(fd, pBackGptInfo, sizeof(VTOY_BK_GPT_INFO));
 
-        Name = pMainGptInfo->PartTbl[1].Name;
+        Name = pMainGptInfo->PartTbl[3].Name;
         if (Name[0] == 'V' && Name[1] == 'T' && Name[2] == 'O' && Name[3] == 'Y')
         {
-            if (pMainGptInfo->PartTbl[1].Attr != VENTOY_EFI_PART_ATTR)
+            if (pMainGptInfo->PartTbl[3].Attr != VENTOY_EFI_PART_ATTR)
             {                
-                pMainGptInfo->PartTbl[1].Attr = VENTOY_EFI_PART_ATTR;
+                pMainGptInfo->PartTbl[3].Attr = VENTOY_EFI_PART_ATTR;
                 pMainGptInfo->Head.PartTblCrc = VtoyCrc32(pMainGptInfo->PartTbl, sizeof(pMainGptInfo->PartTbl));
                 pMainGptInfo->Head.Crc = 0;
                 pMainGptInfo->Head.Crc = VtoyCrc32(&pMainGptInfo->Head, pMainGptInfo->Head.Length);
 
-                pBackGptInfo->PartTbl[1].Attr = VENTOY_EFI_PART_ATTR;
+                pBackGptInfo->PartTbl[3].Attr = VENTOY_EFI_PART_ATTR;
                 pBackGptInfo->Head.PartTblCrc = VtoyCrc32(pBackGptInfo->PartTbl, sizeof(pBackGptInfo->PartTbl));
                 pBackGptInfo->Head.Crc = 0;
                 pBackGptInfo->Head.Crc = VtoyCrc32(&pBackGptInfo->Head, pBackGptInfo->Head.Length);
