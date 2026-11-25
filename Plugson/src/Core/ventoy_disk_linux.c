@@ -473,28 +473,28 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
             *ppartstyle = part_style;
         }
 
-        if (gpt->PartTbl[0].StartLBA == 0 || gpt->PartTbl[1].StartLBA == 0)
+        if (gpt->PartTbl[2].StartLBA == 0 || gpt->PartTbl[3].StartLBA == 0)
         {
             vdebug("NO ventoy efi part layout <%llu %llu>\n", 
-                (_ull)gpt->PartTbl[0].StartLBA,
-                (_ull)gpt->PartTbl[1].StartLBA);
+                (_ull)gpt->PartTbl[2].StartLBA,
+                (_ull)gpt->PartTbl[3].StartLBA);
             goto end;
         }
 
         for (i = 0; i < 36; i++)
         {
-            name[i] = (char)(gpt->PartTbl[1].Name[i]);
+            name[i] = (char)(gpt->PartTbl[3].Name[i]);
         }
         if (strcmp(name, "VTOYEFI"))
         {
-            vdebug("Invalid efi part2 name <%s>\n", name);
+            vdebug("Invalid efi part4 name <%s>\n", name);
             goto end;
         }
 
-        part1_start_sector = gpt->PartTbl[0].StartLBA;
-        part1_sector_count = gpt->PartTbl[0].LastLBA - part1_start_sector + 1;
-        part2_start_sector = gpt->PartTbl[1].StartLBA;
-        part2_sector_count = gpt->PartTbl[1].LastLBA - part2_start_sector + 1;
+        part1_start_sector = gpt->PartTbl[2].StartLBA;
+        part1_sector_count = gpt->PartTbl[2].LastLBA - part1_start_sector + 1;
+        part2_start_sector = gpt->PartTbl[3].StartLBA;
+        part2_sector_count = gpt->PartTbl[3].LastLBA - part2_start_sector + 1;
 
         preserved_space = info->size_in_byte - (part2_start_sector + part2_sector_count + 33) * 512;
     }
@@ -506,10 +506,10 @@ int ventoy_get_vtoy_data(ventoy_disk *info, int *ppartstyle)
             *ppartstyle = part_style;
         }
         
-        part1_start_sector = gpt->MBR.PartTbl[0].StartSectorId;
-        part1_sector_count = gpt->MBR.PartTbl[0].SectorCount;
-        part2_start_sector = gpt->MBR.PartTbl[1].StartSectorId;
-        part2_sector_count = gpt->MBR.PartTbl[1].SectorCount;
+        part1_start_sector = gpt->MBR.PartTbl[2].StartSectorId;
+        part1_sector_count = gpt->MBR.PartTbl[2].SectorCount;
+        part2_start_sector = gpt->MBR.PartTbl[3].StartSectorId;
+        part2_sector_count = gpt->MBR.PartTbl[3].SectorCount;
 
         preserved_space = info->size_in_byte - (part2_start_sector + part2_sector_count) * 512;
     }
