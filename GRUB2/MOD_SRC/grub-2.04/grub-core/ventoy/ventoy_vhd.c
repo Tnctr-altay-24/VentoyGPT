@@ -233,7 +233,7 @@ static int ventoy_vhd_patch_disk(const char *vhdpath, ventoy_patch_vhd *patch1, 
     if (vhdpath[0] == '/')
     {
         gpt = g_ventoy_part_info;  
-        partIndex = 0;
+        partIndex = 2;
         debug("This is Ventoy ISO partIndex %d %s\n", partIndex, vhdpath);
     }
     else
