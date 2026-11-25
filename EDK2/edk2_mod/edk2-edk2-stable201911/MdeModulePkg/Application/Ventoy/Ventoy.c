@@ -534,21 +534,43 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
 {
     UINTN i = 0;
     UINTN Count = 0;
-    UINT64 DiskSize = 0;
-    MBR_HEAD *pMBR = NULL;
-    UINT8 *pBuffer = NULL;
-    EFI_HANDLE *Handles;
-    EFI_STATUS Status = EFI_SUCCESS;
-    EFI_BLOCK_IO_PROTOCOL *pBlockIo;
+    UINTN BufferSize;
 
-    pBuffer = AllocatePool(2048);
+    UINT64 DiskSize = 0;
+
+    MBR_HEAD *pMBR = NULL;
+    VTOY_GPT_INFO *pGPT = NULL;
+
+    UINT8 *pBuffer = NULL;
+
+    EFI_HANDLE *Handles = NULL;
+    EFI_STATUS Status = EFI_SUCCESS;
+
+    EFI_BLOCK_IO_PROTOCOL *pBlockIo = NULL;
+
+    BufferSize = sizeof(VTOY_GPT_INFO);
+
+    // Ventoy partition layout uses 512-byte sectors.
+    if ((BufferSize % 512) != 0)
+    {
+        return EFI_UNSUPPORTED;
+    }
+
+    pBuffer = AllocateZeroPool(BufferSize);
+
     if (!pBuffer)
     {
         return EFI_OUT_OF_RESOURCES;
     }
 
-    Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiBlockIoProtocolGuid,
-                                     NULL, &Count, &Handles);
+    Status = gBS->LocateHandleBuffer(
+        ByProtocol,
+        &gEfiBlockIoProtocolGuid,
+        NULL,
+        &Count,
+        &Handles
+    );
+
     if (EFI_ERROR(Status))
     {
         FreePool(pBuffer);
@@ -557,67 +579,180 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
 
     for (i = 0; i < Count; i++)
     {
+        pBlockIo = NULL;
+
         Status = gBS->HandleProtocol(Handles[i], &gEfiBlockIoProtocolGuid, (VOID **)&pBlockIo);
         if (EFI_ERROR(Status))
         {
             continue;
         }
 
-        DiskSize = (pBlockIo->Media->LastBlock + 1) * pBlockIo->Media->BlockSize;
+        if (!pBlockIo || !pBlockIo->Media)
+        {
+            continue;
+        }
+
+        if (!pBlockIo->Media->MediaPresent ||
+            pBlockIo->Media->BlockSize != 512)
+        {
+            continue;
+        }
+
+        DiskSize =
+            (pBlockIo->Media->LastBlock + 1) *
+            (UINT64)pBlockIo->Media->BlockSize;
+
         debug("This Disk size: %llu", DiskSize);
+
         if (g_chain->os_param.vtoy_disk_size != DiskSize)
         {
             continue;
         }
 
-        Status = pBlockIo->ReadBlocks(pBlockIo, pBlockIo->Media->MediaId, 0, 512, pBuffer);
+        ZeroMem(pBuffer, BufferSize);
+
+        // Read MBR + GPT header + GPT partition table.
+        Status = pBlockIo->ReadBlocks(
+            pBlockIo,
+            pBlockIo->Media->MediaId,
+            0,
+            BufferSize,
+            pBuffer
+        );
+
         if (EFI_ERROR(Status))
         {
-            debug("ReadBlocks filed %r", Status);
+            debug("ReadBlocks failed %r", Status);
             continue;
         }
 
-        if (CompareMem(g_chain->os_param.vtoy_disk_guid, pBuffer + 0x180, 16) == 0 &&
-            CompareMem(g_chain->os_param.vtoy_disk_signature, pBuffer + 0x1b8, 4) == 0)
+        // Check disk GUID and disk signature.
+        if (CompareMem(
+                g_chain->os_param.vtoy_disk_guid,
+                pBuffer + 0x180,
+                16) != 0 ||
+            CompareMem(
+                g_chain->os_param.vtoy_disk_signature,
+                pBuffer + 0x1b8,
+                4) != 0)
         {
-            pMBR = (MBR_HEAD *)pBuffer;
-            if (g_os_param_reserved[6] == 0 && pMBR->PartTbl[2].FsFlag != 0xEE)
+            continue;
+        }
+
+        pGPT = (VTOY_GPT_INFO *)pBuffer;
+        pMBR = &pGPT->MBR;
+
+        if (g_os_param_reserved[6] == 0)
+        {
+            // =====================================
+            // GPT PARTITION TABLE
+            // =====================================
+
+            if (CompareMem(
+                    pGPT->Head.Signature,
+                    "EFI PART",
+                    8) == 0)
             {
+                VTOY_GPT_PART_TBL *PartTbl;
+
+                PartTbl = pGPT->PartTbl;
+
+                debug("GPT disk detected");
+
+                // GPT3 = Ventoy ISO partition
+                // GPT4 = VTOYEFI partition
+
+                if (PartTbl[2].StartLBA != 482799206 ||
+                    PartTbl[3].StartLBA !=
+                        PartTbl[2].LastLBA + 1 ||
+                    PartTbl[3].LastLBA < PartTbl[3].StartLBA ||
+                    (PartTbl[3].LastLBA + 1 -
+                     PartTbl[3].StartLBA) != 4202988)
+                {
+                    debug("Failed to check GPT partition layout");
+
+                    ventoy_warn_invalid_device();
+                    continue;
+                }
+
+                debug("GPT partition layout check OK");
+            }
+            else
+            {
+                // =====================================
+                // MBR PARTITION TABLE
+                // =====================================
+
+                debug("MBR disk detected");
+
                 if (pMBR->PartTbl[2].StartSectorId != 482799206 ||
                     pMBR->PartTbl[3].SectorCount != 4202988 ||
-                    pMBR->PartTbl[3].StartSectorId != pMBR->PartTbl[2].StartSectorId + pMBR->PartTbl[2].SectorCount)
+                    pMBR->PartTbl[3].StartSectorId !=
+                        pMBR->PartTbl[2].StartSectorId +
+                        pMBR->PartTbl[2].SectorCount)
                 {
-                    debug("Failed to check disk part table");
+                    debug("Failed to check MBR partition layout");
+
                     ventoy_warn_invalid_device();
+                    continue;
                 }
+
+                debug("MBR partition layout check OK");
             }
-
-            gBlockData.RawBlockIoHandle = Handles[i];
-            gBlockData.pRawBlockIo = pBlockIo;
-            gBS->OpenProtocol(Handles[i], &gEfiDevicePathProtocolGuid,
-                              (VOID **)&(gBlockData.pDiskDevPath),
-                              ImageHandle,
-                              Handles[i],
-                              EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-
-            debug("Find Ventoy Disk Sig Handle:%p DP:%s", Handles[i],
-                ConvertDevicePathToText(gBlockData.pDiskDevPath, FALSE, FALSE));
-            break;
         }
+
+        // =====================================
+        // VENTOY DISK FOUND
+        // =====================================
+
+        gBlockData.RawBlockIoHandle = Handles[i];
+        gBlockData.pRawBlockIo = pBlockIo;
+
+        gBlockData.pDiskDevPath = NULL;
+
+        Status = gBS->OpenProtocol(
+            Handles[i],
+            &gEfiDevicePathProtocolGuid,
+            (VOID **)&gBlockData.pDiskDevPath,
+            ImageHandle,
+            Handles[i],
+            EFI_OPEN_PROTOCOL_GET_PROTOCOL
+        );
+
+        if (EFI_ERROR(Status))
+        {
+            debug("Open DevicePath failed %r", Status);
+
+            gBlockData.RawBlockIoHandle = NULL;
+            gBlockData.pRawBlockIo = NULL;
+            gBlockData.pDiskDevPath = NULL;
+
+            continue;
+        }
+
+        debug(
+            "Find Ventoy Disk Sig Handle:%p DP:%s",
+            Handles[i],
+            ConvertDevicePathToText(
+                gBlockData.pDiskDevPath,
+                FALSE,
+                FALSE
+            )
+        );
+
+        break;
     }
 
+    FreePool(pBuffer);
     FreePool(Handles);
 
     if (i >= Count)
     {
         return EFI_NOT_FOUND;
     }
-    else
-    {
-        return EFI_SUCCESS;
-    }
-}
 
+    return EFI_SUCCESS;
+}
 
 STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk_fs(IN EFI_HANDLE ImageHandle)
 {
