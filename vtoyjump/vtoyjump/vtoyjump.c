@@ -577,10 +577,15 @@ out:
     return bRet;
 }
 
-static int GetPhyDiskUUID(const char LogicalDrive, UINT8 *UUID, UINT32 *DiskSig, DISK_EXTENT *DiskExtent)
+
+static int GetPhyDiskUUID(
+    const char LogicalDrive,
+    UINT8 *UUID,
+    UINT32 *DiskSig,
+    DISK_EXTENT *DiskExtent)
 {
     BOOL Ret;
-    DWORD dwSize;
+    DWORD dwSize = 0;
     HANDLE Handle;
     VOLUME_DISK_EXTENTS DiskExtents;
     CHAR PhyPath[128];
@@ -588,61 +593,117 @@ static int GetPhyDiskUUID(const char LogicalDrive, UINT8 *UUID, UINT32 *DiskSig,
 
     Log("GetPhyDiskUUID %C", LogicalDrive);
 
-    sprintf_s(PhyPath, sizeof(PhyPath), "\\\\.\\%C:", LogicalDrive);
-    Handle = CreateFileA(PhyPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+    sprintf_s(PhyPath, sizeof(PhyPath),
+        "\\\\.\\%C:", LogicalDrive);
+
+    Handle = CreateFileA(
+        PhyPath,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        0,
+        OPEN_EXISTING,
+        0,
+        0);
+
     if (Handle == INVALID_HANDLE_VALUE)
     {
-        Log("Could not open the disk<%s>, error:%u", PhyPath, GetLastError());
+        Log("Could not open volume <%s>, error:%u",
+            PhyPath, GetLastError());
         return 1;
     }
 
-    Ret = DeviceIoControl(Handle,
+    memset(&DiskExtents, 0, sizeof(DiskExtents));
+
+    Ret = DeviceIoControl(
+        Handle,
         IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
         NULL,
         0,
         &DiskExtents,
-        (DWORD)(sizeof(DiskExtents)),
-        (LPDWORD)&dwSize,
+        (DWORD)sizeof(DiskExtents),
+        &dwSize,
         NULL);
+
     if (!Ret || DiskExtents.NumberOfDiskExtents == 0)
     {
-        Log("DeviceIoControl IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS failed, error:%u", GetLastError());
+        Log("DeviceIoControl failed, error:%u",
+            GetLastError());
+
         CloseHandle(Handle);
         return 1;
     }
+
+    memcpy(DiskExtent, DiskExtents.Extents,
+        sizeof(DISK_EXTENT));
+
+    Log("%C: is in PhysicalDrive%d Offset:%llu",
+        LogicalDrive,
+        DiskExtents.Extents[0].DiskNumber,
+        (ULONGLONG)DiskExtents.Extents[0].StartingOffset.QuadPart);
+
     CloseHandle(Handle);
 
-    memcpy(DiskExtent, DiskExtents.Extents, sizeof(DISK_EXTENT));
-    Log("%C: is in PhysicalDrive%d Offset:%llu", LogicalDrive, DiskExtents.Extents[0].DiskNumber,
-        (ULONGLONG)(DiskExtents.Extents[0].StartingOffset.QuadPart));
+    sprintf_s(PhyPath, sizeof(PhyPath),
+        "\\\\.\\PhysicalDrive%d",
+        DiskExtents.Extents[0].DiskNumber);
 
-    sprintf_s(PhyPath, sizeof(PhyPath), "\\\\.\\PhysicalDrive%d", DiskExtents.Extents[0].DiskNumber);
-    Handle = CreateFileA(PhyPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+    Handle = CreateFileA(
+        PhyPath,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        0,
+        OPEN_EXISTING,
+        0,
+        0);
+
     if (Handle == INVALID_HANDLE_VALUE)
     {
-        Log("Could not open the disk<%s>, error:%u", PhyPath, GetLastError());
+        Log("Could not open disk <%s>, error:%u",
+            PhyPath, GetLastError());
         return 1;
     }
 
-    if (!ReadFile(Handle, SectorBuf, sizeof(SectorBuf), &dwSize, NULL))
+    dwSize = 0;
+
+    Ret = ReadFile(
+        Handle,
+        SectorBuf,
+        sizeof(SectorBuf),
+        &dwSize,
+        NULL);
+
+    if (!Ret || dwSize != sizeof(SectorBuf))
     {
-        Log("ReadFile failed, dwSize:%u  error:%u", dwSize, GetLastError());
+        Log("MBR ReadFile failed, dwSize:%u error:%u",
+            dwSize, GetLastError());
+
         CloseHandle(Handle);
         return 1;
     }
 
+    Log("PhysicalDrive%d MBR read successful",
+        DiskExtents.Extents[0].DiskNumber);
+
     memcpy(UUID, SectorBuf + 0x180, 16);
+
     if (DiskSig)
     {
         memcpy(DiskSig, SectorBuf + 0x1B8, 4);
 
-        Log("DiskSig bytes: %02X %02X %02X %02X", SectorBuf[0x1B8], SectorBuf[0x1B9], SectorBuf[0x1BA], SectorBuf[0x1BB]);
+        Log("DiskSig bytes: %02X %02X %02X %02X",
+            SectorBuf[0x1B8],
+            SectorBuf[0x1B9],
+            SectorBuf[0x1BA],
+            SectorBuf[0x1BB]);
 
         Log("DiskSig value: %08X", *DiskSig);
-        Sleep(5000);
+
+        Log("Waiting 10 seconds...");
+        Sleep(10000);
     }
 
     CloseHandle(Handle);
+
     return 0;
 }
 
