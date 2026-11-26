@@ -411,37 +411,65 @@ static int vtoy_vlnk_printf(ventoy_os_param *param, char *diskname)
     uint8_t mbr[512];
     int fd = -1;
     char diskpath[128];
-    uint8_t check[8] = { 0x56, 0x54, 0x00, 0x47, 0x65, 0x00, 0x48, 0x44 };
-    
+
+    static const uint8_t MbrTail[16] = { 0xAD, 0xDE, 0x06, 0x3C, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0xEE, 0xFE, 0x7F, 0x80, 0x01, 0x00 };
+
+    static const uint8_t MbrEnd[2] = { 0x55, 0xAA };
+
     memcpy(disk_sig, param->vtoy_reserved + 7, 4);
 
-    debug("vlnk disk sig: %02x %02x %02x %02x \n", disk_sig[0], disk_sig[1], disk_sig[2], disk_sig[3]);
+    debug("vlnk disk sig: %02x %02x %02x %02x\n",
+        disk_sig[0], disk_sig[1], disk_sig[2], disk_sig[3]);
 
     cnt = vtoy_find_disk_by_sig(disk_sig, diskname);
+
     if (cnt == 1)
     {
         snprintf(diskpath, sizeof(diskpath), "/dev/%s", diskname);
+
         fd = open(diskpath, O_RDONLY | O_BINARY);
+
         if (fd >= 0)
         {
             memset(mbr, 0, sizeof(mbr));
-            read(fd, mbr, sizeof(mbr));
-            close(fd);
 
-            if (memcmp(mbr + 0x190, check, 8) == 0)
+            if (read(fd, mbr, sizeof(mbr)) != sizeof(mbr))
+            {
+                debug("MBR read failed /dev/%s\n", diskname);
+                close(fd);
+                goto out;
+            }
+
+            close(fd);
+            fd = -1;
+
+            if (memcmp(mbr, g_check_mbr_data, 0x1B8) == 0 &&
+                memcmp(mbr + 0x1B8, MbrTail, 16) == 0 &&
+                memcmp(mbr + 0x1FE, MbrEnd, 2) == 0)
             {
                 printf("/dev/%s", diskname);
-                return 0;                
+                return 0;
             }
             else
             {
-                debug("check data failed /dev/%s\n", diskname);
+                debug("MBR check failed /dev/%s\n", diskname);
             }
         }
+        else
+        {
+            debug("Disk open failed /dev/%s\n", diskname);
+        }
+    }
+
+out:
+    if (fd >= 0)
+    {
+        close(fd);
     }
 
     debug("find count=%d\n", cnt);
     printf("unknown");
+
     return 1;
 }
 
