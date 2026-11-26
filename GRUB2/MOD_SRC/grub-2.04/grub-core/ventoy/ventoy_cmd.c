@@ -714,41 +714,23 @@ static int ventoy_check_official_device(grub_device_t dev)
 	}
 
 	/* MBR check */
-	disk = grub_disk_open(dev->disk->name);
-	if (!disk)
-	{
-    	return ventoy_set_check_result(11, "Disk open failed");
-	}
+    disk = grub_disk_open(dev->disk->name);
+    if (!disk)
+    {
+        return ventoy_set_check_result(11, "Disk open failed");
+    }
 
-	grub_memset(mbr, 0, 512);
+    grub_memset(mbr, 0, 512);
+    grub_disk_read(disk, 0, 0, 512, mbr);
+    grub_disk_close(disk);
 
-	if (grub_disk_read(disk, 0, 0, 512, mbr))
-	{
-    	grub_disk_close(disk);
-    	return ventoy_set_check_result(15, "MBR read failed");
-	}
+    if (grub_memcmp(g_check_mbr_data, mbr, 0x1B8) || grub_memcmp(g_check_mbr_data + 0x1B8, mbr + 0x1B8, 16) ||
+        grub_memcmp(g_check_mbr_data + 0x1FE, mbr + 0x1FE, 2))
+    {
+        return ventoy_set_check_result(12, "MBR check failed");
+    }
 
-	grub_disk_close(disk);
-
-	/* Check first 440 bytes */
-	if (grub_memcmp(g_check_mbr_data, mbr, 0x1B8))
-	{
-    	return ventoy_set_check_result(12, "MBR first 440 bytes mismatch");
-	}
-
-	/* Check next 16 bytes */
-	if (grub_memcmp(g_check_mbr_data + 0x1B8, mbr + 0x1B8, 16))
-	{
-    	return ventoy_set_check_result(13, "MBR 16 bytes mismatch");
-	}
-
-	/* Check MBR signature */
-	if (grub_memcmp(g_check_mbr_data + 0x1FE, mbr + 0x1FE, 2))
-	{
-    	return ventoy_set_check_result(14, "MBR signature mismatch");
-	}
-	grub_millisleep(10000);
-	return ventoy_set_check_result(0, NULL);
+    return ventoy_set_check_result(0, NULL);
 }
 
 static int ventoy_check_ignore_flag(const char *filename, const struct grub_dirhook_info *info, void *data)
