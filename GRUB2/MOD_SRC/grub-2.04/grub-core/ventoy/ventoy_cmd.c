@@ -1717,7 +1717,7 @@ static int ventoy_vlnk_iterate_partition(struct grub_disk *disk, const grub_part
 
     /* skip Ventoy partition 1/2 */
     grub_memcpy(&SelfSig, g_ventoy_part_info->MBR.BootCode + 0x1b8, 4);
-    if (partition->number < 2 && SelfSig == *pSig)
+    if (partition->number < 3 && SelfSig == *pSig)
     {
         return 0;
     }
