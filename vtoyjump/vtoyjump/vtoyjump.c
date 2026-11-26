@@ -578,6 +578,7 @@ out:
 }
 
 
+
 static int GetPhyDiskUUID(
     const char LogicalDrive,
     UINT8 *UUID,
@@ -586,33 +587,52 @@ static int GetPhyDiskUUID(
 {
     BOOL Ret;
     DWORD dwSize = 0;
-    HANDLE Handle;
+    DWORD ErrorCode;
+    HANDLE Handle = INVALID_HANDLE_VALUE;
+
     VOLUME_DISK_EXTENTS DiskExtents;
     CHAR PhyPath[128];
     UINT8 SectorBuf[512];
 
-    Log("GetPhyDiskUUID %C", LogicalDrive);
+    Log("========================================");
+    Log("GetPhyDiskUUID START: Drive=%C", LogicalDrive);
 
-    sprintf_s(PhyPath, sizeof(PhyPath),
-        "\\\\.\\%C:", LogicalDrive);
+    /*
+     * Open logical volume
+     */
+    sprintf_s(
+        PhyPath,
+        sizeof(PhyPath),
+        "\\\\.\\%C:",
+        LogicalDrive);
 
     Handle = CreateFileA(
         PhyPath,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
-        0,
+        NULL,
         OPEN_EXISTING,
         0,
-        0);
+        NULL);
 
     if (Handle == INVALID_HANDLE_VALUE)
     {
-        Log("Could not open volume <%s>, error:%u",
-            PhyPath, GetLastError());
+        ErrorCode = GetLastError();
+
+        Log("Volume open failed: %s Error=%u",
+            PhyPath, ErrorCode);
+
         return 1;
     }
 
+    Log("Volume opened successfully: %s", PhyPath);
+
+    /*
+     * Get physical disk extent
+     */
     memset(&DiskExtents, 0, sizeof(DiskExtents));
+
+    dwSize = 0;
 
     Ret = DeviceIoControl(
         Handle,
@@ -626,24 +646,35 @@ static int GetPhyDiskUUID(
 
     if (!Ret || DiskExtents.NumberOfDiskExtents == 0)
     {
-        Log("DeviceIoControl failed, error:%u",
-            GetLastError());
+        ErrorCode = GetLastError();
+
+        Log("Get volume disk extents failed: Error=%u",
+            ErrorCode);
 
         CloseHandle(Handle);
         return 1;
     }
 
-    memcpy(DiskExtent, DiskExtents.Extents,
+    memcpy(
+        DiskExtent,
+        &DiskExtents.Extents[0],
         sizeof(DISK_EXTENT));
 
-    Log("%C: is in PhysicalDrive%d Offset:%llu",
+    Log("%C: PhysicalDrive%d Offset:%llu Length:%llu",
         LogicalDrive,
         DiskExtents.Extents[0].DiskNumber,
-        (ULONGLONG)DiskExtents.Extents[0].StartingOffset.QuadPart);
+        (ULONGLONG)DiskExtents.Extents[0].StartingOffset.QuadPart,
+        (ULONGLONG)DiskExtents.Extents[0].ExtentLength.QuadPart);
 
     CloseHandle(Handle);
+    Handle = INVALID_HANDLE_VALUE;
 
-    sprintf_s(PhyPath, sizeof(PhyPath),
+    /*
+     * Open physical disk
+     */
+    sprintf_s(
+        PhyPath,
+        sizeof(PhyPath),
         "\\\\.\\PhysicalDrive%d",
         DiskExtents.Extents[0].DiskNumber);
 
@@ -651,17 +682,27 @@ static int GetPhyDiskUUID(
         PhyPath,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
-        0,
+        NULL,
         OPEN_EXISTING,
         0,
-        0);
+        NULL);
 
     if (Handle == INVALID_HANDLE_VALUE)
     {
-        Log("Could not open disk <%s>, error:%u",
-            PhyPath, GetLastError());
+        ErrorCode = GetLastError();
+
+        Log("Physical disk open failed: %s Error=%u",
+            PhyPath, ErrorCode);
+
         return 1;
     }
+
+    Log("Physical disk opened successfully: %s", PhyPath);
+
+    /*
+     * Read first 512 bytes
+     */
+    memset(SectorBuf, 0, sizeof(SectorBuf));
 
     dwSize = 0;
 
@@ -674,18 +715,31 @@ static int GetPhyDiskUUID(
 
     if (!Ret || dwSize != sizeof(SectorBuf))
     {
-        Log("MBR ReadFile failed, dwSize:%u error:%u",
-            dwSize, GetLastError());
+        ErrorCode = GetLastError();
+
+        Log("MBR ReadFile failed: Ret=%d Size=%u Error=%u",
+            Ret, dwSize, ErrorCode);
 
         CloseHandle(Handle);
         return 1;
     }
 
-    Log("PhysicalDrive%d MBR read successful",
-        DiskExtents.Extents[0].DiskNumber);
+    Log("PhysicalDrive%d MBR read successful: Size=%u",
+        DiskExtents.Extents[0].DiskNumber,
+        dwSize);
 
+    /*
+     * Read UUID
+     * Original offset preserved: 0x180
+     */
     memcpy(UUID, SectorBuf + 0x180, 16);
 
+    Log("UUID read successful");
+
+    /*
+     * Read Disk Signature
+     * Original offset preserved: 0x1B8
+     */
     if (DiskSig)
     {
         memcpy(DiskSig, SectorBuf + 0x1B8, 4);
@@ -698,11 +752,19 @@ static int GetPhyDiskUUID(
 
         Log("DiskSig value: %08X", *DiskSig);
 
-        Log("Waiting 10 seconds...");
+        /*
+         * Temporary diagnostic delay
+         */
+        Log("Waiting 10 seconds for debugging...");
         Sleep(10000);
+        Log("Debug wait finished");
     }
 
     CloseHandle(Handle);
+    Handle = INVALID_HANDLE_VALUE;
+
+    Log("GetPhyDiskUUID SUCCESS");
+    Log("========================================");
 
     return 0;
 }
