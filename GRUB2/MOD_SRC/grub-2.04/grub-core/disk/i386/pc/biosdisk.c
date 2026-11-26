@@ -391,7 +391,7 @@ static int ventoy_is_mbr_match(ventoy_mbr_head *head)
         head->PartTbl[2].SectorCount;
 
     if (head->PartTbl[3].StartSectorId != PartStartSector ||
-        head->PartTbl[3].SectorCount != 65536)
+        head->PartTbl[3].SectorCount != 4202988)
     {
         return 0;
     }
