@@ -3251,102 +3251,38 @@ void ventoy_fill_os_param(grub_file_t file, ventoy_os_param *param)
     const char *val = NULL;
     const char *cdprompt = NULL;
     grub_uint32_t i;
-    grub_uint8_t chksum = 0;
-    grub_disk_t disk;
+    grub_uint8_t  chksum = 0;
+    grub_disk_t   disk;
 
     disk = file->device->disk;
-
-    /*
-     * GPT PARTITION DEBUG
-     * ISO secildiginde GRUB bolum bilgilerini gosterir.
-     */
-
-    grub_printf("\n");
-    grub_printf("========================================\n");
-    grub_printf("       VENTOY ISO PARTITION DEBUG       \n");
-    grub_printf("========================================\n");
-
-    grub_printf("Disk name: %s\n", disk->name);
-
-    if (disk->partition)
-    {
-        grub_printf("Partition index: %d\n",
-                    disk->partition->number);
-
-        grub_printf("Partition ID: %d\n",
-                    disk->partition->number + 1);
-
-        grub_printf("Partition start: %llu\n",
-                    (unsigned long long)disk->partition->start);
-
-        grub_printf("Partition length: %llu\n",
-                    (unsigned long long)disk->partition->len);
-    }
-    else
-    {
-        grub_printf("ERROR: No partition information!\n");
-    }
-
-    grub_printf("Disk total sectors: %llu\n",
-                (unsigned long long)disk->total_sectors);
-
-    grub_printf("Sector size: %u\n",
-                1U << disk->log_sector_size);
-
-    grub_printf("ISO file: %s\n", file->name);
-
-    grub_printf("ISO size: %llu\n",
-                (unsigned long long)file->size);
-
-    grub_printf("========================================\n");
-
-    /* Ilk debug ciktisini okumak icin 10 saniye bekle */
-    grub_millisleep(10000);
-
-
-    /*
-     * ORIGINAL VENTOY PARAMETER INITIALIZATION
-     */
-
     grub_memcpy(&param->guid, &g_ventoy_guid, sizeof(ventoy_guid));
 
-    param->vtoy_disk_size =
-        disk->total_sectors * (1 << disk->log_sector_size);
-
-    param->vtoy_disk_part_id =
-        disk->partition->number + 1;
-
-    param->vtoy_disk_part_type =
-        ventoy_get_fs_type(file->fs->name);
+    param->vtoy_disk_size = disk->total_sectors * (1 << disk->log_sector_size);
+    param->vtoy_disk_part_id = disk->partition->number + 1;
+    param->vtoy_disk_part_type = ventoy_get_fs_type(file->fs->name);
 
     pos = grub_strstr(file->name, "/");
-
     if (!pos)
     {
         pos = file->name;
     }
 
-    grub_snprintf(param->vtoy_img_path,
-                  sizeof(param->vtoy_img_path),
-                  "%s", pos);
+    grub_snprintf(param->vtoy_img_path, sizeof(param->vtoy_img_path), "%s", pos);
 
-    ventoy_get_disk_guid(file->name,
-                         param->vtoy_disk_guid,
-                         param->vtoy_disk_signature);
+    ventoy_get_disk_guid(file->name, param->vtoy_disk_guid, param->vtoy_disk_signature);
 
     param->vtoy_img_size = file->size;
 
     param->vtoy_reserved[0] = g_ventoy_break_level;
     param->vtoy_reserved[1] = g_ventoy_debug_level;
+
     param->vtoy_reserved[2] = g_ventoy_chain_type;
 
-    /* Windows CD/DVD prompt */
+    /* Windows CD/DVD prompt   0:suppress  1:reserved */
     param->vtoy_reserved[4] = 0;
-
-    if (g_ventoy_chain_type == 1)
+    if (g_ventoy_chain_type == 1) /* Windows */
     {
         cdprompt = ventoy_get_env("VTOY_WINDOWS_CD_PROMPT");
-
         if (cdprompt && cdprompt[0] == '1' && cdprompt[1] == 0)
         {
             param->vtoy_reserved[4] = 1;
@@ -3354,35 +3290,27 @@ void ventoy_fill_os_param(grub_file_t file, ventoy_os_param *param)
     }
 
     fs = ventoy_get_env("ventoy_fs_probe");
-
     if (fs && grub_strcmp(fs, "udf") == 0)
     {
         param->vtoy_reserved[3] = 1;
     }
 
     param->vtoy_reserved[5] = 0;
-
     val = ventoy_get_env("VTOY_LINUX_REMOUNT");
-
     if (val && val[0] == '1' && val[1] == 0)
     {
         param->vtoy_reserved[5] = 1;
     }
 
-    /* Disk signature used for vlnk */
+    /* ventoy_disk_signature used for vlnk */
     param->vtoy_reserved[6] = file->vlnk;
-
-    grub_memcpy(param->vtoy_reserved + 7,
-                g_ventoy_part_info->MBR.BootCode + 0x1b8,
-                4);
+    grub_memcpy(param->vtoy_reserved + 7, g_ventoy_part_info->MBR.BootCode + 0x1b8, 4);
 
 
     /* Windows UEFI force resolution lock */
-
-    if (g_ventoy_chain_type == 1)
+    if (g_ventoy_chain_type == 1) /* Windows */
     {
         val = ventoy_get_env("VTOY_WIN_UEFI_RES_LOCK");
-
         if (val && val[1] == 0)
         {
             if (val[0] == '1')
@@ -3397,52 +3325,16 @@ void ventoy_fill_os_param(grub_file_t file, ventoy_os_param *param)
     }
 
 
-    /*
-     * CHECKSUM CALCULATION
-     */
-
+    /* calculate checksum */
     for (i = 0; i < sizeof(ventoy_os_param); i++)
     {
         chksum += *((grub_uint8_t *)param + i);
     }
-
     param->chksum = (grub_uint8_t)(0x100 - chksum);
-
-
-    /*
-     * FINAL PARAMETER DEBUG
-     */
-
-    grub_printf("\n");
-    grub_printf("========================================\n");
-    grub_printf("       VENTOY OS PARAM DEBUG            \n");
-    grub_printf("========================================\n");
-
-    grub_printf("Windows partition ID: %u\n",
-                param->vtoy_disk_part_id);
-
-    grub_printf("Windows partition type: %u\n",
-                param->vtoy_disk_part_type);
-
-    grub_printf("Windows disk size: %llu\n",
-                (unsigned long long)param->vtoy_disk_size);
-
-    grub_printf("Windows ISO path: %s\n",
-                param->vtoy_img_path);
-
-    grub_printf("Windows ISO size: %llu\n",
-                (unsigned long long)param->vtoy_img_size);
-
-    grub_printf("Windows checksum: %u\n",
-                param->chksum);
-
-    grub_printf("========================================\n");
-
-    /* Son debug ciktisini okumak icin 10 saniye bekle */
-    grub_millisleep(10000);
 
     return;
 }
+
 static const char* g_chunk_err_msg[VTOY_CHUNK_ERR_MAX] =
 {
     "success",
