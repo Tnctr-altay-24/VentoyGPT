@@ -2320,34 +2320,73 @@ static BOOL CheckVentoyDisk(DWORD DiskNum)
     HANDLE Handle;
 
     static const UINT8 MbrHead[0x1B8] = { 0 };
-    
-    static const UINT8 MbrTail[16] = { 0xAD, 0xDE, 0x06, 0x3C, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0xEE, 0xFE, 0x7F, 0x80, 0x01, 0x00 };
+
+    static const UINT8 MbrTail[16] = {
+        0xAD, 0xDE, 0x06, 0x3C,
+        0x00, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0xEE, 0xFE,
+        0x7F, 0x80, 0x01, 0x00
+    };
 
     static const UINT8 MbrEnd[2] = { 0x55, 0xAA };
 
+    Log("Starting MBR check on PhysicalDrive%d", DiskNum);
+
     sprintf_s(PhyPath, sizeof(PhyPath), "\\\\.\\PhysicalDrive%d", DiskNum);
-    Handle = CreateFileA(PhyPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0 );
+
+    Handle = CreateFileA(
+        PhyPath,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        0,
+        OPEN_EXISTING,
+        0,
+        0
+    );
+
     if (Handle == INVALID_HANDLE_VALUE)
     {
         Log("Could not open the disk<%s>, error:%u", PhyPath, GetLastError());
         return FALSE;
     }
 
-    if (!ReadFile(Handle, SectorBuf, sizeof(SectorBuf), &dwSize, NULL) || dwSize != sizeof(SectorBuf))
+    if (!ReadFile(Handle, SectorBuf, sizeof(SectorBuf), &dwSize, NULL) ||
+        dwSize != sizeof(SectorBuf))
     {
         Log("ReadFile failed, dwSize:%u error:%u", dwSize, GetLastError());
         CloseHandle(Handle);
         return FALSE;
     }
 
+    Log("MBR read successful, size:%u", dwSize);
+
     CloseHandle(Handle);
 
-    if (memcmp(SectorBuf, MbrHead, sizeof(MbrHead)) || memcmp(SectorBuf + 0x1B8, MbrTail, sizeof(MbrTail)) ||
-        memcmp(SectorBuf + 0x1FE, MbrEnd, sizeof(MbrEnd)))
+    Log("Starting MBR comparison");
+
+    if (memcmp(SectorBuf, MbrHead, sizeof(MbrHead)))
     {
-        Log("MBR check failed on PhysicalDrive%d", DiskNum);
+        Log("MBR HEAD comparison failed on PhysicalDrive%d", DiskNum);
         return FALSE;
     }
+
+    Log("MBR HEAD comparison successful");
+
+    if (memcmp(SectorBuf + 0x1B8, MbrTail, sizeof(MbrTail)))
+    {
+        Log("MBR TAIL comparison failed on PhysicalDrive%d", DiskNum);
+        return FALSE;
+    }
+
+    Log("MBR TAIL comparison successful");
+
+    if (memcmp(SectorBuf + 0x1FE, MbrEnd, sizeof(MbrEnd)))
+    {
+        Log("MBR END comparison failed on PhysicalDrive%d", DiskNum);
+        return FALSE;
+    }
+
+    Log("MBR END comparison successful");
 
     Log("MBR check successful on PhysicalDrive%d", DiskNum);
 
