@@ -631,7 +631,18 @@ static int GetPhyDiskUUID(const char LogicalDrive, UINT8 *UUID, UINT32 *DiskSig,
         return 1;
     }
 
+    Log("PhysicalDrive sector read size:%u", dwSize);
+
     memcpy(UUID, SectorBuf + 0x180, 16);
+    Log("UUID bytes:");
+    Log("%02X %02X %02X %02X %02X %02X %02X %02X",
+        UUID[0], UUID[1], UUID[2], UUID[3],
+        UUID[4], UUID[5], UUID[6], UUID[7]);
+
+    Log("%02X %02X %02X %02X %02X %02X %02X %02X",
+        UUID[8], UUID[9], UUID[10], UUID[11],
+        UUID[12], UUID[13], UUID[14], UUID[15]);
+
     if (DiskSig)
     {
         memcpy(DiskSig, SectorBuf + 0x1B8, 4);
