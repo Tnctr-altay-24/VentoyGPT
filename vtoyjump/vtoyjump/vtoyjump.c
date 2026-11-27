@@ -2319,6 +2319,8 @@ static BOOL CheckVentoyDisk(DWORD DiskNum)
     UINT8 SectorBuf[512];
     HANDLE Handle;
 
+    static const UINT8 MbrHead[0x1B8] = { 0 };
+    
     static const UINT8 MbrTail[16] = { 0xAD, 0xDE, 0x06, 0x3C, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0xEE, 0xFE, 0x7F, 0x80, 0x01, 0x00 };
 
     static const UINT8 MbrEnd[2] = { 0x55, 0xAA };
@@ -2340,7 +2342,8 @@ static BOOL CheckVentoyDisk(DWORD DiskNum)
 
     CloseHandle(Handle);
 
-    if (memcmp(SectorBuf, g_check_mbr_data, 0x1B8) || memcmp(SectorBuf + 0x1B8, MbrTail, 16) || memcmp(SectorBuf + 0x1FE, MbrEnd, 2))
+    if (memcmp(SectorBuf, MbrHead, sizeof(MbrHead)) || memcmp(SectorBuf + 0x1B8, MbrTail, sizeof(MbrTail)) ||
+        memcmp(SectorBuf + 0x1FE, MbrEnd, sizeof(MbrEnd)))
     {
         Log("MBR check failed on PhysicalDrive%d", DiskNum);
         return FALSE;
